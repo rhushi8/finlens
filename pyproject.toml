@@ -42,7 +42,6 @@ finance-ai-mcp = "finance_ai.mcp.server:main"
 pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-p no:cacheprovider"
-cache_dir = "pytest_runtime_cache"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

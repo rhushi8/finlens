@@ -29,6 +29,15 @@ def _parse_seendate(seendate: str | None) -> datetime | None:
     return None
 
 
+def _parse_iso_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+
+
 def _parse_publish_epoch(value: int | float | None) -> datetime | None:
     if value is None:
         return None
@@ -61,19 +70,32 @@ def _fallback_yfinance_news(query: str, max_results: int) -> NewsSearchResponse:
 
     articles: list[NewsArticle] = []
     for item in ticker_news[: max(1, min(max_results, 10))]:
-        title = item.get("title")
-        url = item.get("link") or item.get("url")
+        # yfinance >=0.2.40 nests fields under "content"; older versions are flat.
+        content = item.get("content") if isinstance(item.get("content"), dict) else item
+        title = content.get("title")
+        url = (
+            content.get("link")
+            or content.get("url")
+            or (content.get("clickThroughUrl") or {}).get("url")
+            or (content.get("canonicalUrl") or {}).get("url")
+        )
         if not title or not url:
             continue
-        publisher = item.get("publisher") or "yfinance"
-        published = _parse_publish_epoch(item.get("providerPublishTime"))
+        publisher = (
+            content.get("publisher")
+            or (content.get("provider") or {}).get("displayName")
+            or "yfinance"
+        )
+        published = _parse_publish_epoch(item.get("providerPublishTime")) or _parse_iso_datetime(
+            content.get("pubDate") or content.get("displayTime")
+        )
         articles.append(
             NewsArticle(
                 source=f"{publisher} (yfinance)",
                 title=title,
                 url=url,
                 published_date=published,
-                summary=item.get("summary"),
+                summary=content.get("summary"),
             )
         )
 
