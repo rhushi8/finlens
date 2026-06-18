@@ -98,27 +98,6 @@ def _fallback_thesis(
     )
 
 
-def synthesize_grounded_thesis(
-    query: str,
-    subject: str,
-    tool_summary: str,
-    evidence_lines: list[str],
-    model_name: str | None = None,
-    is_comparison: bool = False,
-) -> str:
-    """Generate a grounded thesis using Ollama when available, otherwise fall back."""
-
-    summary, _recommendation, _rationale = synthesize_grounded_response(
-        query=query,
-        subject=subject,
-        tool_summary=tool_summary,
-        evidence_lines=evidence_lines,
-        model_name=model_name,
-        is_comparison=is_comparison,
-    )
-    return summary
-
-
 def synthesize_grounded_response(
     query: str,
     subject: str,

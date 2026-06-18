@@ -299,7 +299,7 @@ def _render_explanation(answer) -> None:
 def _render_feedback(answer) -> None:
     feedback_key = f"feedback_{hash(answer.query)}"
     if st.session_state.get(feedback_key):
-        st.caption(f"Feedback recorded — thanks!")
+        st.caption("Feedback recorded — thanks!")
         return
     col_a, col_b, *_ = st.columns([1, 1, 8])
     if col_a.button("👍", key=f"{feedback_key}_up", help="This answer was helpful"):

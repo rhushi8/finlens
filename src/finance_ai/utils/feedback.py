@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import sqlite3
 import time
-from pathlib import Path
 
 from finance_ai.config import ROOT_DIR
 
