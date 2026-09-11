@@ -1,48 +1,95 @@
 # AI Financial Analyst
 
-A grounded, agentic AI assistant that answers stock-market questions with **evidence-backed, source-cited analysis** instead of hallucinated numbers. It plans which tools to call, gathers live market data, news, and documents, scores how well its own answer is supported, and returns a structured **BUY / HOLD / SELL** view with citations and a confidence level.
+An agentic assistant that answers stock-market questions with sourced evidence
+rather than remembered numbers. It decides which tools to call, pulls live
+market data, news and documents, scores how well its own answer is supported,
+and returns a BUY / HOLD / SELL view with citations and a confidence level.
 
-## Problem Statement
-Large language models answer financial questions fluently but unreliably — they hallucinate prices, ratios, and news, and give no signal of how well-supported an answer actually is. When the output informs a money decision, that mix of confident tone and unverifiable content is unacceptable. The problem this project addresses: deliver natural-language financial analysis that stays grounded in real, current data and is transparent about the evidence and confidence behind every claim.
+Educational project. Not investment advice.
 
-## Key features
-- **Planner-driven orchestration** — classifies intent (price, fundamentals, news, comparison, market ideas) and routes to the right tools; runs in `rule`, `hybrid`, or `llm` mode with a deterministic fallback so it never hard-fails.
-- **Parallel tool execution** — live price & fundamentals (yfinance), free news (GDELT), and an India market scanner (NIFTY / SENSEX) run concurrently.
-- **RAG over documents** — chunking + sentence-transformer embeddings + FAISS persistence, with metadata filtering, deduplication, and optional reranking.
-- **Grounding & confidence** — scores how well evidence supports the answer, calibrates a confidence value, softens wording when evidence is weak, and attaches source citations.
-- **Stock comparison engine** — side-by-side momentum, P/E, beta, market cap, and dividend yield → a weighted BUY/HOLD decision with bull and bear cases.
-- **Structured, typed output** — a Pydantic `AnalystAnswer` (summary, recommendation, confidence, citations, warnings, latency, tool traces) rendered in a Streamlit dashboard.
-- **MCP server** — exposes the same finance tools over JSON-RPC for external agent clients.
+## Why
+
+Language models answer financial questions fluently and unreliably. They
+hallucinate prices, ratios and headlines, and they give you no way to tell how
+well-supported any of it is. That combination of confident tone and
+unverifiable content is a bad thing to put next to a money decision. So the
+goal here was natural-language analysis that stays tied to real, current data
+and is honest about the evidence behind each claim.
+
+## What it does
+
+A planner classifies the intent, price, fundamentals, news, comparison or
+market ideas, and routes to the right tools. It runs in `rule`, `hybrid` or
+`llm` mode, with a deterministic fallback so it never hard-fails.
+
+Tools run in parallel: live price and fundamentals from yfinance, free news
+from GDELT, and an India market scanner covering NIFTY and SENSEX.
+
+Retrieval over documents uses chunking, sentence-transformer embeddings and
+FAISS for persistence, with metadata filtering, deduplication and optional
+reranking.
+
+Before anything reaches the user, a grounding check scores how well the
+evidence supports the answer, calibrates a confidence value, softens the
+wording when the evidence is thin, and attaches the citations.
+
+The comparison engine puts two stocks side by side on momentum, P/E, beta,
+market cap and dividend yield, then weights those into a BUY/HOLD call with a
+bull case and a bear case.
+
+Output is a typed Pydantic `AnalystAnswer` carrying the summary,
+recommendation, confidence, citations, warnings, latency and tool traces, which
+the Streamlit dashboard renders.
+
+An MCP server exposes the same finance tools over JSON-RPC for other agent
+clients.
 
 ## How it works
-```
-user query → planner → tool selection → tool execution → RAG retrieval → grounded synthesis → grounding/quality check → structured response → UI
-```
-The LLM never answers from memory alone — it is guided by the planner, tool outputs, retrieved context, and a grounding check before anything reaches the user.
 
-## Tech stack
-Python · Streamlit · LangChain (RAG) · FAISS · sentence-transformers · yfinance · GDELT · Ollama (local LLM) · Pydantic · pytest · Docker · GitHub Actions
+```
+query → planner → tool selection → parallel tool calls → RAG retrieval
+      → grounded synthesis → grounding check → typed response → UI
+```
+
+The model never answers from memory alone. The planner, the tool output, the
+retrieved context and the grounding check all sit between the question and the
+answer.
+
+## Stack
+
+Python, Streamlit, LangChain for RAG, FAISS, sentence-transformers, yfinance,
+GDELT, Ollama for the local model, Pydantic, pytest, Docker and GitHub Actions.
 
 ## Quickstart
+
 ```bash
 python -m venv .venv
-.venv\Scripts\Activate.ps1          # Windows (use source .venv/bin/activate on macOS/Linux)
+.venv\Scripts\Activate.ps1          # source .venv/bin/activate on macOS or Linux
 pip install -e ".[dev]"
-copy .env.example .env              # then adjust settings
+copy .env.example .env
 streamlit run app/streamlit_app.py
 ```
-Optional local model for synthesis: `ollama pull qwen2.5:7b-instruct`
-Run the test suite: `pytest -q`
 
-## Project structure
-- `app/` — Streamlit UI
-- `src/finance_ai/` — agents (planner, router), tools, rag, llm, schemas, utils
-- `tests/` — deterministic unit/integration tests (external services mocked)
-- `scripts/` — evaluation & smoke scripts
-- `docs/` — sample retrieval documents and design notes
-- `Dockerfile`, `.github/workflows/ci.yml` — containerization & CI
+For local synthesis: `ollama pull qwen2.5:7b-instruct`. Tests run with
+`pytest -q`.
 
-## Notes & limitations
-- The planner is heuristic (rules + deterministic fallback), not full model-native planning.
-- News quality depends on the free GDELT endpoint; the system degrades gracefully if it is unavailable.
-- Educational / portfolio project — **not investment advice.**
+## Layout
+
+```
+app/                 streamlit UI
+src/finance_ai/      planner and router, tools, rag, llm, schemas, utils
+tests/               deterministic tests, external services mocked
+scripts/             evaluation and smoke scripts
+docs/                sample retrieval documents and design notes
+Dockerfile           containerisation
+.github/workflows/   CI
+```
+
+## Known limits
+
+- The planner is heuristic, rules plus a deterministic fallback, rather than
+  full model-native planning.
+- News quality depends on the free GDELT endpoint. The system degrades
+  gracefully when it is down, but it does go down.
+- Grounding scores say how well an answer is supported by what was retrieved.
+  They say nothing about whether the source itself was right.
