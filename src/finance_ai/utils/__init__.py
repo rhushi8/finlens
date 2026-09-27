@@ -1,5 +1,3 @@
-"""Utility helpers for Finance AI Analyst."""
-
 from finance_ai.utils.company_resolution import (
     ResolvedCompany,
     resolve_company_entities,

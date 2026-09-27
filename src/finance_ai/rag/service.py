@@ -1,5 +1,3 @@
-"""Cached retrieval service for finance documents."""
-
 from __future__ import annotations
 
 import logging
@@ -109,8 +107,6 @@ def _build_or_load_retriever(embeddings) -> FinanceRetriever:
 
 @lru_cache(maxsize=1)
 def get_finance_retriever() -> FinanceRetriever:
-    """Return a cached retriever backed by local finance documents."""
-
     attempted_errors: list[Exception] = []
     embeddings_candidates = [_build_embeddings()]
     if not isinstance(embeddings_candidates[0], SimpleKeywordEmbeddings):

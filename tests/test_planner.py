@@ -1,5 +1,3 @@
-"""Tests for planning layer."""
-
 import pytest
 
 from finance_ai.agents.planner import deterministic_fallback_plan, plan_query

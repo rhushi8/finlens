@@ -1,5 +1,3 @@
-"""Tool input and output schemas for finance analyst."""
-
 from datetime import datetime
 from typing import Optional
 
@@ -7,8 +5,6 @@ from pydantic import BaseModel, Field
 
 
 class StockPriceRequest(BaseModel):
-    """Input schema for stock price lookup."""
-
     ticker: str = Field(..., description="Stock ticker symbol (e.g., AAPL, MSFT)")
     period: str = Field(
         default="1mo", description="Time period (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)"
@@ -16,8 +12,6 @@ class StockPriceRequest(BaseModel):
 
 
 class StockPricePoint(BaseModel):
-    """Single price data point."""
-
     date: datetime
     open: float
     high: float
@@ -27,8 +21,6 @@ class StockPricePoint(BaseModel):
 
 
 class StockPriceResponse(BaseModel):
-    """Output schema for stock price data."""
-
     ticker: str
     period: str
     current_price: float
@@ -45,14 +37,10 @@ class StockPriceResponse(BaseModel):
 
 
 class FundamentalsRequest(BaseModel):
-    """Input schema for company fundamentals."""
-
     ticker: str = Field(..., description="Stock ticker symbol")
 
 
 class FundamentalsResponse(BaseModel):
-    """Output schema for company fundamentals."""
-
     ticker: str
     company_name: Optional[str] = None
     sector: Optional[str] = None
@@ -68,8 +56,6 @@ class FundamentalsResponse(BaseModel):
 
 
 class CalculatorRequest(BaseModel):
-    """Input schema for financial calculations."""
-
     operation: str = Field(
         ...,
         description="Operation type: pct_change, price_target, pe_multiple, dividend_income",
@@ -78,8 +64,6 @@ class CalculatorRequest(BaseModel):
 
 
 class CalculatorResponse(BaseModel):
-    """Output schema for calculations."""
-
     operation: str
     result: float
     formatted_result: str
@@ -89,8 +73,6 @@ class CalculatorResponse(BaseModel):
 
 
 class NewsArticle(BaseModel):
-    """Single news article reference."""
-
     source: str
     title: str
     url: str
@@ -99,8 +81,6 @@ class NewsArticle(BaseModel):
 
 
 class NewsSearchResponse(BaseModel):
-    """Output schema for news retrieval."""
-
     query: str
     articles: list[NewsArticle]
     retrieved_at: datetime
@@ -108,8 +88,6 @@ class NewsSearchResponse(BaseModel):
 
 
 class MarketIdea(BaseModel):
-    """Single market idea candidate for India-focused screening."""
-
     ticker: str
     company_name: str
     action: str
@@ -121,8 +99,6 @@ class MarketIdea(BaseModel):
 
 
 class IndiaMarketIdeasResponse(BaseModel):
-    """Output schema for India market ideas generation."""
-
     query: str
     market_snapshot: dict = Field(default_factory=dict)
     ideas: list[MarketIdea] = Field(default_factory=list)
@@ -134,8 +110,6 @@ class IndiaMarketIdeasResponse(BaseModel):
 
 
 class ToolTrace(BaseModel):
-    """Record of a tool execution for transparency."""
-
     tool_name: str
     input_params: dict
     output: dict

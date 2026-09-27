@@ -1,5 +1,3 @@
-"""Optional reranking layer for finance retrieval."""
-
 from __future__ import annotations
 
 import logging
@@ -11,8 +9,6 @@ logger = logging.getLogger(__name__)
 
 
 class FinanceReranker:
-    """Lightweight wrapper around optional cross-encoder reranking."""
-
     def __init__(self, model_name: str | None = None) -> None:
         settings = get_settings()
         self.model_name = model_name or settings.rerank_model

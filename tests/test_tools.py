@@ -1,5 +1,3 @@
-"""Tests for finance tools."""
-
 import pandas as pd
 import pytest
 
@@ -14,8 +12,6 @@ from finance_ai.schemas.tools import StockPriceResponse
 
 
 class TestStockTools:
-    """Test stock price and fundamentals tools."""
-
     @pytest.fixture(autouse=True)
     def _mock_yfinance(self, monkeypatch):
         import finance_ai.tools.stock as stock_module
@@ -61,7 +57,6 @@ class TestStockTools:
         monkeypatch.setattr(stock_module.yf, "Ticker", FakeTicker)
 
     def test_get_stock_price_valid_ticker(self) -> None:
-        """Test fetching stock price for a valid ticker."""
         response = get_stock_price("AAPL", period="1mo")
         assert response.ticker == "AAPL"
         assert response.period == "1mo"
@@ -71,52 +66,41 @@ class TestStockTools:
         assert len(response.data_points) > 0
 
     def test_get_stock_price_invalid_ticker(self) -> None:
-        """Test fetching stock price for invalid ticker."""
         response = get_stock_price("INVALID123456", period="1mo")
         assert response.ticker == "INVALID123456"
         assert response.error is not None
 
     def test_get_stock_price_case_insensitive(self) -> None:
-        """Test that ticker symbol is case-insensitive."""
         response = get_stock_price("aapl", period="1mo")
         assert response.ticker == "AAPL"
 
     def test_get_stock_price_indian_ticker_format(self) -> None:
-        """Test Indian exchange suffix tickers are accepted."""
         response = get_stock_price("RELIANCE.NS", period="1mo")
         assert response.ticker == "RELIANCE.NS"
         assert response.error is None
 
     def test_get_stock_price_change_calculation(self) -> None:
-        """Test that change_pct and change_abs are calculated correctly."""
         response = get_stock_price("MSFT", period="1mo")
         if response.error is None and len(response.data_points) > 0:
             first_price = response.data_points[0].close
             last_price = response.current_price
             expected_change_abs = last_price - first_price
-            # Allow small precision difference
             assert abs(response.change_abs - expected_change_abs) < 1.0
 
     def test_get_fundamentals_valid_ticker(self) -> None:
-        """Test fetching fundamentals for a valid ticker."""
         response = get_fundamentals("AAPL")
         assert response.ticker == "AAPL"
         assert response.error is None
         assert response.company_name is not None or response.sector is not None
 
     def test_get_fundamentals_invalid_ticker(self) -> None:
-        """Test fetching fundamentals for invalid ticker."""
         response = get_fundamentals("FAKETTTT")
         assert response.ticker == "FAKETTTT"
-        # Error expected or missing fields
         assert response.error is None or response.company_name is None
 
 
 class TestCalculator:
-    """Test financial calculator tool."""
-
     def test_pct_change_positive(self) -> None:
-        """Test percentage change calculation for positive change."""
         response = calculate_financial_metric(
             "pct_change", {"old_value": 100, "new_value": 120}
         )
@@ -125,7 +109,6 @@ class TestCalculator:
         assert response.error is None
 
     def test_pct_change_negative(self) -> None:
-        """Test percentage change calculation for negative change."""
         response = calculate_financial_metric(
             "pct_change", {"old_value": 100, "new_value": 80}
         )
@@ -134,14 +117,12 @@ class TestCalculator:
         assert response.error is None
 
     def test_pct_change_zero_old_value(self) -> None:
-        """Test percentage change with zero old value."""
         response = calculate_financial_metric(
             "pct_change", {"old_value": 0, "new_value": 100}
         )
         assert response.error is not None
 
     def test_pe_multiple_calculation(self) -> None:
-        """Test PE multiple to price target calculation."""
         response = calculate_financial_metric(
             "pe_multiple", {"earnings_per_share": 5.0, "target_pe": 20}
         )
@@ -150,7 +131,6 @@ class TestCalculator:
         assert response.error is None
 
     def test_dividend_income_calculation(self) -> None:
-        """Test dividend income calculation."""
         response = calculate_financial_metric(
             "dividend_income",
             {"shares_owned": 100, "annual_dividend_per_share": 2.5},
@@ -160,7 +140,6 @@ class TestCalculator:
         assert response.error is None
 
     def test_price_target_calculation(self) -> None:
-        """Test upside/downside to a target price."""
         response = calculate_financial_metric(
             "price_target",
             {"current_price": 100, "target_price": 120},
@@ -171,7 +150,6 @@ class TestCalculator:
         assert response.error is None
 
     def test_unknown_operation(self) -> None:
-        """Test unknown operation."""
         response = calculate_financial_metric(
             "unknown_op", {"param1": 1, "param2": 2}
         )
@@ -180,8 +158,6 @@ class TestCalculator:
 
 
 class TestNews:
-    """Test news retrieval tool."""
-
     @pytest.fixture(autouse=True)
     def _mock_requests(self, monkeypatch):
         import finance_ai.tools.news as news_module
@@ -221,18 +197,15 @@ class TestNews:
         monkeypatch.setattr(news_module.requests, "get", fake_get)
 
     def test_search_news_valid_query(self) -> None:
-        """Test searching for news with valid query."""
         response = search_news("Apple")
         assert response.query == "Apple"
         assert isinstance(response.articles, list)
 
     def test_search_news_empty_query(self) -> None:
-        """Test searching for news with empty query."""
         response = search_news("")
         assert response.error is not None
 
     def test_search_news_max_results(self) -> None:
-        """Test that max_results limit is respected."""
         response = search_news("Tesla", max_results=3)
         assert len(response.articles) <= 3
 

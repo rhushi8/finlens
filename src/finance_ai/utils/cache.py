@@ -1,5 +1,3 @@
-"""Cache utilities for expensive operations."""
-
 from __future__ import annotations
 
 import functools
@@ -20,9 +18,7 @@ CACHE_VERSION = 4
 
 T = TypeVar("T")
 
-# Modules whose classes are permitted during cache deserialization.
-# Restrict this to our own schemas + stdlib safe types to prevent
-# arbitrary code execution if the .cache/ directory is tampered with.
+# Unpickle allowlist, so a tampered .cache/ can't run code.
 _SAFE_MODULES = frozenset({
     "builtins",
     "datetime",
@@ -49,7 +45,6 @@ class _SafeUnpickler(pickle.Unpickler):
 
 
 def _cache_key(func_name: str, *args, **kwargs) -> str:
-    """Generate a cache key from function name and arguments."""
     key_parts = [func_name]
     key_parts.extend(str(arg) for arg in args)
     key_parts.extend(f"{k}={v}" for k, v in sorted(kwargs.items()))
@@ -58,7 +53,6 @@ def _cache_key(func_name: str, *args, **kwargs) -> str:
 
 
 def _get_cache_path(cache_key: str) -> Path:
-    """Get the file path for a cache entry."""
     return CACHE_DIR / f"{cache_key}.pkl"
 
 
@@ -70,7 +64,7 @@ def _load_cache_entry(cache_path: Path, ttl_seconds: int) -> Any | None:
         logger.debug(f"Cache read failed for {cache_path.name}: {exc}")
         return None
 
-    # Legacy entries did not track TTL/version safely; invalidate them.
+    # Legacy entries lack TTL/version, drop them.
     if isinstance(entry, dict) and "result" in entry and "ttl_valid" in entry:
         try:
             cache_path.unlink(missing_ok=True)
@@ -101,8 +95,6 @@ def _load_cache_entry(cache_path: Path, ttl_seconds: int) -> Any | None:
 
 
 def cached(ttl_seconds: int = 3600) -> Callable:
-    """Simple file-based cache decorator with TTL."""
-
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> T:

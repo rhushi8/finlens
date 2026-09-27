@@ -1,5 +1,3 @@
-"""Simple smoke runner for manual demos."""
-
 from __future__ import annotations
 
 from finance_ai.agents import route_query

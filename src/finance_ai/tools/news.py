@@ -1,5 +1,3 @@
-"""News retrieval tool using free GDELT DOC API."""
-
 from __future__ import annotations
 
 import logging
@@ -48,8 +46,6 @@ def _parse_publish_epoch(value: int | float | None) -> datetime | None:
 
 
 def _fallback_yfinance_news(query: str, max_results: int) -> NewsSearchResponse:
-    """Fallback news provider when GDELT is unavailable or rate-limited."""
-
     entity = resolve_primary_company(query)
     if not entity:
         return NewsSearchResponse(
@@ -107,15 +103,6 @@ def _fallback_yfinance_news(query: str, max_results: int) -> NewsSearchResponse:
 
 @cached(ttl_seconds=600)
 def search_news(query: str, max_results: int = 5) -> NewsSearchResponse:
-    """Search recent finance news with GDELT DOC API.
-
-    Args:
-        query: Search query (company name, ticker, topic)
-        max_results: Max articles to return
-
-    Returns:
-        NewsSearchResponse with parsed article metadata
-    """
     try:
         query = query.strip()
         if not query:

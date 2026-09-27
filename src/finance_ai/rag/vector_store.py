@@ -1,5 +1,3 @@
-"""Vector store helpers for finance RAG."""
-
 import os
 from pathlib import Path
 
@@ -9,21 +7,18 @@ from langchain_core.embeddings import Embeddings
 
 
 def build_vector_store(documents: list[Document], embeddings: Embeddings) -> FAISS:
-    """Build a FAISS vector store from documents."""
     if not documents:
         raise ValueError("No documents provided to build vector store")
     return FAISS.from_documents(documents, embeddings)
 
 
 def save_vector_store(vector_store: FAISS, target_dir: str | Path) -> None:
-    """Save a FAISS vector store to disk."""
     path = Path(target_dir)
     path.mkdir(parents=True, exist_ok=True)
     vector_store.save_local(str(path))
 
 
 def load_vector_store(target_dir: str | Path, embeddings: Embeddings) -> FAISS:
-    """Load a FAISS vector store from disk."""
     path = Path(target_dir)
     allow_dangerous = os.getenv("FINANCE_AI_TRUST_VECTOR_INDEX", "false").lower() in {
         "1",

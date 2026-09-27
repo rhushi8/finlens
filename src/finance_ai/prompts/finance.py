@@ -1,5 +1,3 @@
-"""Prompt builders for finance synthesis."""
-
 from __future__ import annotations
 
 
@@ -10,8 +8,6 @@ def build_grounded_thesis_prompt(
     evidence_lines: list[str],
     is_comparison: bool = False,
 ) -> str:
-    """Build a synthesis prompt for a grounded finance answer."""
-
     evidence_block = "\n".join(f"- {line}" for line in evidence_lines if line.strip())
     if not evidence_block:
         evidence_block = "- No direct evidence was retrieved."

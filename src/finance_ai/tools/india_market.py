@@ -1,5 +1,3 @@
-"""India market scanner and ideas tool."""
-
 from __future__ import annotations
 
 from collections import Counter
@@ -35,7 +33,6 @@ def _idea_action(change_pct: float, risk_profile: str) -> str:
             return "SELL"
         return "WATCH"
 
-    # Moderate profile.
     if change_pct > 3.0:
         return "BUY"
     if change_pct < -4.0:
@@ -45,10 +42,7 @@ def _idea_action(change_pct: float, risk_profile: str) -> str:
 
 @cached(ttl_seconds=900)
 def get_india_market_ideas(query: str, max_results: int = 5) -> IndiaMarketIdeasResponse:
-    """Return India market ideas for broad buy/sell style questions.
-
-    The output is heuristic and educational. It is not personalized advice.
-    """
+    """Heuristic and educational, not personalized advice."""
 
     risk_profile = _risk_profile_from_query(query)
     candidates: list[MarketIdea] = []

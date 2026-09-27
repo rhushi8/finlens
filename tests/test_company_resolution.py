@@ -1,5 +1,3 @@
-"""Tests for company resolution helpers."""
-
 from finance_ai.agents import extract_ticker
 from finance_ai.utils.company_resolution import (
     resolve_company_entities,

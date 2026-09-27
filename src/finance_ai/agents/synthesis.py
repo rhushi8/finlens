@@ -1,5 +1,3 @@
-"""Grounded answer synthesis helpers."""
-
 from __future__ import annotations
 
 import json
@@ -20,7 +18,6 @@ def _clean_model_text(text: str) -> str:
 
 
 def _find_json_object(text: str) -> tuple[dict | None, tuple[int, int] | None]:
-    """Locate the first valid JSON object via bracket matching (handles nesting)."""
     start = text.find("{")
     if start == -1:
         return None, None
@@ -52,8 +49,6 @@ def _find_json_object(text: str) -> tuple[dict | None, tuple[int, int] | None]:
 
 
 def _extract_recommendation_json(text: str) -> tuple[str, str, str]:
-    """Return (summary_without_json, recommendation, rationale)."""
-
     normalized = _clean_model_text(text)
     payload, payload_span = _find_json_object(normalized)
 
@@ -106,8 +101,6 @@ def synthesize_grounded_response(
     model_name: str | None = None,
     is_comparison: bool = False,
 ) -> tuple[str, str, str]:
-    """Generate grounded summary plus structured recommendation and rationale."""
-
     prompt = build_grounded_thesis_prompt(
         query=query,
         subject=subject,

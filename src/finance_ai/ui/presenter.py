@@ -1,5 +1,3 @@
-"""UI presentation helpers for deterministic formatting and chart preparation."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -8,8 +6,6 @@ import pandas as pd
 
 
 def scalar_stock_metrics(stock_view: dict[str, Any]) -> dict[str, Any]:
-    """Return only scalar stock metrics suitable for cards."""
-
     return {
         key: value
         for key, value in stock_view.items()
@@ -18,8 +14,6 @@ def scalar_stock_metrics(stock_view: dict[str, Any]) -> dict[str, Any]:
 
 
 def price_series_frame(stock_view: dict[str, Any]) -> pd.DataFrame:
-    """Build a chart-ready DataFrame from stock view price series."""
-
     series = stock_view.get("price_series")
     if not isinstance(series, list) or not series:
         return pd.DataFrame(columns=["date", "close", "volume"])
@@ -37,8 +31,6 @@ def recommendation_color(recommendation: str) -> str:
 
 
 def pct(value: float) -> str:
-    """Format ratios as whole-number percentages for UI consistency."""
-
     return f"{value:.0%}"
 
 
@@ -49,8 +41,6 @@ def fmt(
     suffix: str = "",
     fallback: str = "-",
 ) -> str:
-    """Format optional numeric values with a shared fallback style."""
-
     if value is None:
         return fallback
     return f"{prefix}{template.format(value)}{suffix}"
@@ -64,8 +54,6 @@ def is_indian_ticker(ticker: str | None) -> bool:
 
 
 def format_metric_value(metric_key: str, value: Any, ticker: str | None) -> str:
-    """Format metrics with market-aware currency and stable decimals."""
-
     if value is None:
         return "N/A"
 
@@ -94,8 +82,6 @@ def build_contextual_suggestions(
     news_view: list[str],
     stock_view: dict[str, Any],
 ) -> list[str]:
-    """Build semantically related follow-up prompts from latest answer context."""
-
     q = (query or "").lower()
     text_blob = " ".join([query, *risk_view[:3], *news_view[:3]]).lower()
     subject_label = subject or "this company"

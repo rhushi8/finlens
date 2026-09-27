@@ -1,6 +1,3 @@
-"""Resilience tests: the system must degrade gracefully when external
-services (GDELT, Ollama) are unavailable."""
-
 from types import SimpleNamespace
 
 import pytest
@@ -18,7 +15,6 @@ class _FakeTicker:
 
 @pytest.fixture
 def _force_gdelt_failure(monkeypatch):
-    """Make the GDELT call raise so the yfinance fallback path is exercised."""
     def boom(*args, **kwargs):
         raise news_module.requests.RequestException("GDELT down")
 
@@ -49,7 +45,6 @@ def test_news_fallback_old_yfinance_schema(_force_gdelt_failure, monkeypatch):
 
 
 def test_news_fallback_new_nested_content_schema(_force_gdelt_failure, monkeypatch):
-    # yfinance >= 0.2.40 nests fields under "content".
     items = [
         {
             "content": {
@@ -67,7 +62,7 @@ def test_news_fallback_new_nested_content_schema(_force_gdelt_failure, monkeypat
     assert len(resp.articles) == 1
     assert resp.articles[0].title == "Apple beats estimates"
     assert resp.articles[0].url == "https://example.com/b"
-    assert resp.articles[0].published_date is not None  # ISO pubDate parsed
+    assert resp.articles[0].published_date is not None
 
 
 def test_synthesis_falls_back_when_ollama_unavailable(monkeypatch):
@@ -83,5 +78,5 @@ def test_synthesis_falls_back_when_ollama_unavailable(monkeypatch):
         evidence_lines=["Apple moved +3% over 1mo."],
     )
     assert recommendation == "HOLD"
-    assert summary  # non-empty deterministic fallback thesis
+    assert summary
     assert "fallback" in rationale.lower()

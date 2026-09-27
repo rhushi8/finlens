@@ -1,5 +1,3 @@
-"""Document loading and chunking helpers."""
-
 import re
 from pathlib import Path
 
@@ -79,7 +77,6 @@ def _load_pdf_file(file_path: Path) -> tuple[str, dict[str, object]]:
 
 
 def load_documents(source_dirs: list[str | Path]) -> list[Document]:
-    """Load markdown, text, and PDF documents from one or more directories."""
     documents: list[Document] = []
 
     for source_dir in source_dirs:
@@ -118,7 +115,6 @@ def split_documents(
     chunk_size: int = 800,
     chunk_overlap: int = 150,
 ) -> list[Document]:
-    """Split documents into overlapping chunks for retrieval."""
     small_docs = [doc for doc in documents if len((doc.page_content or "").strip()) < MIN_CHUNK_CHARS]
     large_docs = [doc for doc in documents if len((doc.page_content or "").strip()) >= MIN_CHUNK_CHARS]
 

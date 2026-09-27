@@ -1,5 +1,3 @@
-"""Tests for UI presenter helpers."""
-
 from finance_ai.ui.presenter import (
     build_contextual_suggestions,
     fmt,

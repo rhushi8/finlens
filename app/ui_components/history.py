@@ -1,5 +1,3 @@
-"""Conversation history rendering helpers."""
-
 from __future__ import annotations
 
 import streamlit as st

@@ -1,5 +1,3 @@
-"""Response schema for agent answers."""
-
 from datetime import datetime
 from typing import Any, Literal, Optional
 
@@ -9,8 +7,6 @@ from finance_ai.schemas.tools import ToolTrace
 
 
 class Citation(BaseModel):
-    """Citation entry tied to retrieval/tool evidence."""
-
     title: str
     source: str
     url: Optional[str] = None
@@ -21,8 +17,6 @@ class Citation(BaseModel):
 
 
 class QueryPlan(BaseModel):
-    """Structured planner output used by the execution pipeline."""
-
     intent: Literal["price", "fundamentals", "news", "rag", "compare", "market_ideas", "market_general", "unknown"]
     is_comparison: bool = False
     requires_rag: bool = False
@@ -39,8 +33,6 @@ class QueryPlan(BaseModel):
 
 
 class ComparisonLeg(BaseModel):
-    """One side of a company comparison."""
-
     ticker: str
     company_name: str
     price: Optional[float] = None
@@ -55,8 +47,6 @@ class ComparisonLeg(BaseModel):
 
 
 class ComparisonView(BaseModel):
-    """Side-by-side structured comparison payload for UI rendering."""
-
     left: ComparisonLeg
     right: ComparisonLeg
     winner: str = "HOLD"
@@ -66,8 +56,6 @@ class ComparisonView(BaseModel):
 
 
 class SourceItem(BaseModel):
-    """Typed source payload used by the UI and downstream explanations."""
-
     title: str
     source_type: str = "market_or_doc"
     source: str
@@ -77,8 +65,6 @@ class SourceItem(BaseModel):
 
 
 class AnalystAnswer(BaseModel):
-    """Structured financial analyst answer for UI-first rendering."""
-
     query: str
     ticker: Optional[str] = None
     company_name: Optional[str] = None
@@ -103,7 +89,7 @@ class AnalystAnswer(BaseModel):
     latency_ms: float = 0.0
     warnings: list[str] = Field(default_factory=list)
 
-    # Backward-compatible fields kept for older UI/tests.
+    # Kept for older UI/tests.
     thesis: str = Field(default="", description="Legacy alias of summary")
     key_metrics: dict = Field(default_factory=dict, description="Legacy metrics field")
     risks: list[str] = Field(default_factory=list, description="Legacy risk list")
@@ -114,8 +100,6 @@ class AnalystAnswer(BaseModel):
     error: Optional[str] = None
 
     def sync_legacy_fields(self) -> "AnalystAnswer":
-        """Populate legacy fields from structured fields for compatibility."""
-
         if not self.thesis:
             self.thesis = self.summary
         if not self.risks:

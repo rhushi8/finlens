@@ -1,5 +1,3 @@
-"""Answer sections and typed rendering helpers."""
-
 from __future__ import annotations
 
 import pandas as pd
@@ -242,8 +240,6 @@ def _render_sources(answer) -> None:
 
 
 def _render_technical(answer) -> None:
-    """Show agent reasoning and tool traces."""
-
     st.subheader("Technical Details")
     st.write(f"**Intent:** {answer.intent}")
     if answer.warnings:
@@ -264,8 +260,6 @@ def _render_technical(answer) -> None:
 
 
 def _render_explanation(answer) -> None:
-    """Show agent reasoning and confidence breakdown."""
-
     st.subheader("How This Answer Was Generated")
 
     col1, col2, col3 = st.columns(3)

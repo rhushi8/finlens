@@ -1,5 +1,3 @@
-"""Quality and grounding helpers for analyst answers."""
-
 from __future__ import annotations
 
 
@@ -16,8 +14,6 @@ def assess_grounding(
     unsupported_claims: int = 0,
     expected_claims: int = 1,
 ) -> tuple[float, list[str]]:
-    """Return a grounding score in [0, 1] and any quality warnings."""
-
     enhanced_mode = source_types is not None or query_relevance > 0 or unsupported_claims > 0 or expected_claims != 1
 
     score = 0.0
@@ -76,8 +72,6 @@ def enforce_grounded_wording(
     threshold: float,
     score: float,
 ) -> str:
-    """Append a cautionary note when grounding quality is weak."""
-
     if score >= threshold or not warnings:
         return thesis
 
@@ -92,8 +86,6 @@ def enforce_grounded_wording(
 
 
 def calibrate_confidence(base_confidence: float, grounding_score: float, has_error: bool) -> float:
-    """Calibrate confidence using grounding quality and runtime error state."""
-
     if has_error:
         return 0.0
 

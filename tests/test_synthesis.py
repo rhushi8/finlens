@@ -1,5 +1,3 @@
-"""Tests for structured synthesis output parsing."""
-
 import pytest
 
 from finance_ai.agents.synthesis import synthesize_grounded_response

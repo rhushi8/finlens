@@ -1,5 +1,3 @@
-"""Schemas for RAG documents and retrieval results."""
-
 from datetime import datetime
 from typing import Any, Optional
 
@@ -7,8 +5,6 @@ from pydantic import BaseModel, Field
 
 
 class DocumentChunk(BaseModel):
-    """A chunk created from a source document."""
-
     chunk_id: str
     source: str
     title: str
@@ -18,8 +14,6 @@ class DocumentChunk(BaseModel):
 
 
 class RetrievalRequest(BaseModel):
-    """Input request for document retrieval."""
-
     query: str
     top_k: int = 4
     ticker: Optional[str] = None
@@ -28,8 +22,6 @@ class RetrievalRequest(BaseModel):
 
 
 class RetrievedChunk(BaseModel):
-    """A retrieved chunk with relevance metadata."""
-
     text: str
     source: str
     title: str
@@ -42,8 +34,6 @@ class RetrievedChunk(BaseModel):
 
 
 class RetrievalResponse(BaseModel):
-    """Output response from the retriever."""
-
     query: str
     results: list[RetrievedChunk] = Field(default_factory=list)
     retrieved_at: datetime = Field(default_factory=datetime.now)

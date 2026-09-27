@@ -1,5 +1,3 @@
-"""Tests for MCP JSON-RPC server wrapper."""
-
 from finance_ai.mcp import FinanceMcpServer
 
 

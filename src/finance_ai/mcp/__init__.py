@@ -1,5 +1,3 @@
-"""MCP server integration for Finance AI Analyst."""
-
 from __future__ import annotations
 
 from importlib import import_module

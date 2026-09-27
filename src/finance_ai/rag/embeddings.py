@@ -1,5 +1,3 @@
-"""Embedding models for finance RAG."""
-
 from __future__ import annotations
 
 import hashlib
@@ -10,8 +8,6 @@ from langchain_core.embeddings import Embeddings
 
 
 class SimpleKeywordEmbeddings(Embeddings):
-    """Lightweight deterministic embeddings for tests and fallback use."""
-
     def __init__(self, dimension: int = 128) -> None:
         self.dimension = dimension
 
@@ -32,8 +28,6 @@ class SimpleKeywordEmbeddings(Embeddings):
 
 
 class SentenceTransformerEmbeddings(Embeddings):
-    """Sentence-transformers based embeddings for semantic retrieval."""
-
     def __init__(
         self,
         model_name: str = "BAAI/bge-small-en-v1.5",

@@ -1,5 +1,3 @@
-"""Pytest configuration and shared fixtures."""
-
 from pathlib import Path
 import shutil
 from uuid import uuid4
@@ -11,7 +9,6 @@ LOCAL_TMP_ROOT = Path("test_tmp")
 
 
 def pytest_addoption(parser):
-    """Add --live option to run live integration tests."""
     parser.addoption(
         "--live",
         action="store_true",
@@ -21,7 +18,6 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
-    """Register live marker."""
     config.addinivalue_line(
         "markers",
         "live: marks test as live integration test (requires external APIs, use --live to run)",
@@ -33,7 +29,6 @@ def pytest_configure(config):
 
 
 def pytest_collection_modifyitems(config, items):
-    """Skip live tests unless --live flag is passed."""
     if config.getoption("--live"):
         return
     skip_live = pytest.mark.skip(reason="need --live option to run live integration tests")
@@ -44,8 +39,6 @@ def pytest_collection_modifyitems(config, items):
 
 @pytest.fixture(autouse=True)
 def _isolate_disk_cache(tmp_path, monkeypatch):
-    """Keep tests deterministic by isolating the file-based cache per test."""
-
     import finance_ai.utils.cache as cache_module
 
     cache_dir = tmp_path / ".cache"
@@ -56,7 +49,7 @@ def _isolate_disk_cache(tmp_path, monkeypatch):
 
 @pytest.fixture
 def tmp_path():
-    """Provide a workspace-local temp directory without relying on pytest's tmpdir plugin."""
+    """Workspace-local tmp dir, avoids pytest's tmpdir plugin."""
 
     LOCAL_TMP_ROOT.mkdir(exist_ok=True)
     path = LOCAL_TMP_ROOT / uuid4().hex

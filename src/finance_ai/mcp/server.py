@@ -1,7 +1,4 @@
-"""Minimal MCP-compatible JSON-RPC server for finance tools.
-
-Transport: stdio (one JSON object per line).
-"""
+"""MCP-style JSON-RPC over stdio, one JSON object per line."""
 
 from __future__ import annotations
 
@@ -34,8 +31,6 @@ def _to_payload(result: Any) -> Any:
 
 
 class FinanceMcpServer:
-    """Minimal server implementing core MCP-like methods over JSON-RPC."""
-
     def __init__(self) -> None:
         self._tools: dict[str, ToolSpec] = {
             "get_stock_price": ToolSpec(

@@ -1,9 +1,3 @@
-"""Scenario evaluator for Finance AI Analyst.
-
-Run with:
-    .\\.venv\\Scripts\\python.exe scripts/run_eval.py
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -1,5 +1,3 @@
-"""Tests for grounding and quality helpers."""
-
 from finance_ai.agents.quality import (
     assess_grounding,
     calibrate_confidence,

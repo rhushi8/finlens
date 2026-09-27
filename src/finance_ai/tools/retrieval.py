@@ -1,5 +1,3 @@
-"""Document retrieval tool wrapper for planner composition."""
-
 from __future__ import annotations
 
 from finance_ai.rag.service import get_finance_retriever
@@ -13,8 +11,6 @@ def retrieve_finance_context(
     date_from: str | None = None,
     date_to: str | None = None,
 ) -> RetrievalResponse:
-    """Retrieve finance-grounded context chunks with metadata filters."""
-
     retriever = get_finance_retriever()
     return retriever.retrieve(
         query=query,

@@ -1,5 +1,3 @@
-"""Layout helpers for header, controls, and query input."""
-
 from __future__ import annotations
 
 import streamlit as st
@@ -92,7 +90,7 @@ def render_sidebar() -> str | None:
             dest = notes_dir / uf.name
             dest.write_bytes(uf.read())
             saved.append(uf.name)
-        # Clear the lru_cache so the retriever rebuilds with the new files.
+        # So the retriever rebuilds with the new files.
         try:
             from finance_ai.rag.service import get_finance_retriever
             get_finance_retriever.cache_clear()

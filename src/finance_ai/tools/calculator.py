@@ -1,5 +1,3 @@
-"""Financial calculator tool."""
-
 import logging
 from datetime import datetime
 
@@ -9,19 +7,8 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_financial_metric(operation: str, params: dict) -> CalculatorResponse:
-    """
-    Perform financial calculations (not API-dependent).
-
-    Args:
-        operation: Type of calculation
-        params: Operation-specific parameters
-
-    Returns:
-        CalculatorResponse with result and details
-    """
     try:
         if operation == "pct_change":
-            # Calculate percentage change between two values
             old_value = float(params.get("old_value", 0))
             new_value = float(params.get("new_value", 0))
 
@@ -44,7 +31,6 @@ def calculate_financial_metric(operation: str, params: dict) -> CalculatorRespon
             )
 
         elif operation == "pe_multiple":
-            # Calculate what price would be at a target PE ratio
             earnings_per_share = float(params.get("earnings_per_share", 0))
             target_pe = float(params.get("target_pe", 0))
 
@@ -67,7 +53,6 @@ def calculate_financial_metric(operation: str, params: dict) -> CalculatorRespon
             )
 
         elif operation == "dividend_income":
-            # Calculate annual dividend income
             shares_owned = float(params.get("shares_owned", 0))
             annual_dividend = float(params.get("annual_dividend_per_share", 0))
 
@@ -80,7 +65,6 @@ def calculate_financial_metric(operation: str, params: dict) -> CalculatorRespon
                 retrieved_at=datetime.now(),
             )
         elif operation == "price_target":
-            # Calculate upside/downside to a target price.
             current_price = float(params.get("current_price", 0))
             target_price = float(params.get("target_price", 0))
 

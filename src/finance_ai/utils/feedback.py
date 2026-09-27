@@ -1,5 +1,3 @@
-"""Lightweight answer-feedback store backed by SQLite."""
-
 from __future__ import annotations
 
 import logging
@@ -43,7 +41,7 @@ def record_feedback(
     grounding_score: float,
     rating: int,
 ) -> None:
-    """Persist a thumbs-up (rating=1) or thumbs-down (rating=-1) for an answer."""
+    """rating: 1 = thumbs up, -1 = thumbs down."""
     try:
         conn = _connect()
         conn.execute(
@@ -58,7 +56,6 @@ def record_feedback(
 
 
 def get_feedback_stats() -> dict:
-    """Return aggregate counts for display in the sidebar."""
     try:
         conn = _connect()
         row = conn.execute(

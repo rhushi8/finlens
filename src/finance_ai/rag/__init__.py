@@ -1,5 +1,3 @@
-"""Retrieval-Augmented Generation utilities for Finance AI Analyst."""
-
 from __future__ import annotations
 
 from importlib import import_module

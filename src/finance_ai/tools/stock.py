@@ -1,5 +1,3 @@
-"""Stock price and fundamentals tools using yfinance."""
-
 import logging
 import re
 from datetime import datetime
@@ -25,12 +23,9 @@ def _is_valid_ticker(ticker: str) -> bool:
 
 
 def _normalize_history_frame(hist: pd.DataFrame, ticker: str) -> pd.DataFrame:
-    """Return a single-ticker OHLCV frame with flat columns."""
-
     if isinstance(hist.columns, pd.MultiIndex):
         if ticker in hist.columns.get_level_values(-1):
             return hist.xs(ticker, axis=1, level=-1, drop_level=True)
-        # Fallback: choose first available ticker slice.
         first_symbol = hist.columns.get_level_values(-1)[0]
         return hist.xs(first_symbol, axis=1, level=-1, drop_level=True)
     return hist
@@ -38,16 +33,6 @@ def _normalize_history_frame(hist: pd.DataFrame, ticker: str) -> pd.DataFrame:
 
 @cached(ttl_seconds=300)
 def get_stock_price(ticker: str, period: str = "1mo") -> StockPriceResponse:
-    """
-    Fetch stock price data for a given ticker and period.
-
-    Args:
-        ticker: Stock ticker symbol (e.g., AAPL)
-        period: Time period (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
-
-    Returns:
-        StockPriceResponse with current price, change, and historical data
-    """
     try:
         ticker = ticker.upper().strip()
         if not _is_valid_ticker(ticker):
@@ -64,7 +49,6 @@ def get_stock_price(ticker: str, period: str = "1mo") -> StockPriceResponse:
                 error=f"Invalid ticker format: {ticker}",
             )
 
-        # Fetch historical data
         hist = yf.download(ticker, period=period, progress=False)
 
         if hist is None or hist.empty:
@@ -83,7 +67,6 @@ def get_stock_price(ticker: str, period: str = "1mo") -> StockPriceResponse:
 
         hist = _normalize_history_frame(hist, ticker)
 
-        # Get current price (last close) and period baseline (first open)
         current_price = float(hist["Close"].iloc[-1])
         period_open = float(hist["Open"].iloc[0])
         high_col = hist["High"]
@@ -92,12 +75,10 @@ def get_stock_price(ticker: str, period: str = "1mo") -> StockPriceResponse:
         change_abs = current_price - period_open
         change_pct = (change_abs / period_open * 100) if period_open != 0 else 0
 
-        # Calculate period high/low and average volume
         period_high = float(high_col.max())
         period_low = float(low_col.min())
         volume_avg = float(vol_col.mean())
 
-        # Build data points
         data_points = []
         for idx in range(len(hist)):
             row_date = hist.index[idx]
@@ -143,15 +124,6 @@ def get_stock_price(ticker: str, period: str = "1mo") -> StockPriceResponse:
 
 @cached(ttl_seconds=300)
 def get_fundamentals(ticker: str) -> FundamentalsResponse:
-    """
-    Fetch company fundamentals for a given ticker.
-
-    Args:
-        ticker: Stock ticker symbol
-
-    Returns:
-        FundamentalsResponse with PE ratio, market cap, dividends, etc.
-    """
     try:
         ticker = ticker.upper().strip()
         if not _is_valid_ticker(ticker):
@@ -161,7 +133,6 @@ def get_fundamentals(ticker: str) -> FundamentalsResponse:
                 error=f"Invalid ticker format: {ticker}",
             )
 
-        # Fetch ticker info
         yf_ticker = yf.Ticker(ticker)
         info = yf_ticker.info
 

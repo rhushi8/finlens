@@ -1,5 +1,3 @@
-"""Planning layer for finance agent execution."""
-
 from __future__ import annotations
 
 import json
@@ -152,8 +150,6 @@ def _llm_plan(query: str, entities: list[ResolvedCompany]) -> QueryPlan | None:
 
 
 def deterministic_fallback_plan(query: str, entities: list[ResolvedCompany]) -> QueryPlan:
-    """Deterministic fallback plan for reliability."""
-
     query_lower = query.lower()
     has_news_keywords = _contains_any(query_lower, NEWS_KEYWORDS)
     has_rag_keywords = _contains_any(query_lower, RAG_KEYWORDS)
@@ -281,16 +277,13 @@ def plan_query(
     entities: list[ResolvedCompany],
     planner_mode: str | None = None,
 ) -> QueryPlan:
-    """Build a practical structured plan with deterministic fallback semantics."""
-
     settings = get_settings()
     mode = (planner_mode or settings.agent_planner_mode).lower()
     base = deterministic_fallback_plan(query, entities)
 
     if mode in {"llm", "hybrid"}:
         llm_candidate = _llm_plan(query, entities)
-        # Only adopt the LLM plan if it resolved a meaningful intent; never let an
-        # LLM "unknown" downgrade a perfectly good deterministic plan.
+        # Never let an LLM 'unknown' downgrade a good deterministic plan.
         if llm_candidate is not None and (llm_candidate.intent != "unknown" or base.intent == "unknown"):
             base = llm_candidate
 
@@ -299,20 +292,17 @@ def plan_query(
     if _contains_any(query_lower, DETAILED_KEYWORDS):
         base.response_style = "detailed"
 
-    # If confidence is low for a single-company question, add retrieval to improve grounding.
     if base.intent in {"price", "fundamentals"} and base.confidence_low:
         base.requires_rag = True
         if "rag_retriever" not in base.tool_sequence:
             base.tool_sequence.append("rag_retriever")
 
-    # Comparison answers require current news context for balanced bull/bear and synthesis.
     if base.intent == "compare":
         base.is_comparison = True
         base.requires_news = True
         if "search_news" not in base.tool_sequence:
             base.tool_sequence.append("search_news")
 
-    # If question is long and complex, prefer detailed synthesis.
     if len(query.split()) >= 14:
         base.response_style = "detailed"
 

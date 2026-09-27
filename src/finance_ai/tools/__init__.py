@@ -1,8 +1,4 @@
-"""Finance tools for data retrieval and calculation.
-
-The package surface stays lazy so importing `finance_ai.tools` does not require
-provider-specific dependencies until a tool is actually called.
-"""
+"""Lazy imports. Provider deps load only when a tool runs."""
 
 from __future__ import annotations
 

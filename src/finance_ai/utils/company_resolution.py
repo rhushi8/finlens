@@ -1,5 +1,3 @@
-"""Resolve company names and tickers from user queries."""
-
 from __future__ import annotations
 
 import re
@@ -8,8 +6,6 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class ResolvedCompany:
-    """Resolved company reference from a query."""
-
     ticker: str
     company_name: str
     matched_text: str
@@ -97,13 +93,6 @@ def _is_ticker_token(token: str) -> bool:
 
 
 def resolve_company_entities(query: str) -> list[ResolvedCompany]:
-    """Return resolved companies mentioned in the query.
-
-    The resolver supports both company names and ticker symbols. It keeps the
-    current implementation lightweight and deterministic so it can run without
-    external dependencies.
-    """
-
     normalized_query = _normalize(query)
     matches: list[ResolvedCompany] = []
 
@@ -153,7 +142,5 @@ def resolve_company_entities(query: str) -> list[ResolvedCompany]:
 
 
 def resolve_primary_company(query: str) -> ResolvedCompany | None:
-    """Return the first resolved company reference, if any."""
-
     entities = resolve_company_entities(query)
     return entities[0] if entities else None

@@ -1,5 +1,3 @@
-"""Planner-driven finance agent pipeline."""
-
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -343,7 +341,7 @@ def route_query(
     model_name: str | None = None,
     planner_mode: str | None = None,
 ) -> AnalystAnswer:
-    """Run explicit user query -> planner -> tools -> retrieval -> synthesis pipeline."""
+    """query -> planner -> tools -> retrieval -> synthesis."""
 
     started = time.time()
     settings = get_settings()
@@ -376,7 +374,6 @@ def route_query(
     recommendation = "HOLD"
     summary: str = ""
 
-    # Deterministic reliability fallback.
     if plan.intent == "unknown":
         latency_ms = (time.time() - started) * 1000
         answer = AnalystAnswer(
@@ -824,7 +821,5 @@ def route_query(
 
 
 def extract_ticker(query: str) -> str | None:
-    """Extract the primary ticker from a query, including company-name aliases."""
-
     primary_entity = resolve_primary_company(query)
     return primary_entity.ticker if primary_entity else None

@@ -1,5 +1,3 @@
-"""Tests for disk cache TTL/version behavior."""
-
 from __future__ import annotations
 
 import pickle

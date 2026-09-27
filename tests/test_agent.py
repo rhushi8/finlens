@@ -1,5 +1,3 @@
-"""Tests for planner-driven agent routing."""
-
 from datetime import datetime
 
 import pytest

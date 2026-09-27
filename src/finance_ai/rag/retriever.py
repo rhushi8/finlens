@@ -1,5 +1,3 @@
-"""Retriever utilities for finance RAG."""
-
 from pathlib import Path
 
 from langchain_core.embeddings import Embeddings
@@ -13,8 +11,6 @@ from finance_ai.schemas.rag import RetrievedChunk, RetrievalResponse
 
 
 class FinanceRetriever:
-    """High-level retriever wrapper for finance documents."""
-
     def __init__(
         self,
         vector_store,
@@ -65,8 +61,6 @@ class FinanceRetriever:
 
     @staticmethod
     def _l2_to_similarity(distance: float) -> float:
-        """Convert FAISS L2 distance into bounded similarity where higher is better."""
-
         value = max(0.0, float(distance))
         return 1.0 / (1.0 + value)
 
@@ -137,5 +131,4 @@ class FinanceRetriever:
 
 
 def build_finance_retriever(source_paths: list[str | Path], embeddings: Embeddings | None = None) -> FinanceRetriever:
-    """Convenience builder for finance retriever."""
     return FinanceRetriever.from_source_paths(source_paths=source_paths, embeddings=embeddings)

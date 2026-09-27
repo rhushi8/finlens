@@ -1,5 +1,3 @@
-"""Streamlit dashboard for AI Financial Analyst."""
-
 from __future__ import annotations
 
 import time
@@ -64,7 +62,7 @@ def _warmup_retriever() -> None:
         get_finance_retriever()
         st.session_state.retriever_warmed = True
     except Exception:
-        # Warmup is best-effort. Query path still handles retrieval failures gracefully.
+        # Best-effort. Queries handle retrieval failures anyway.
         st.session_state.retriever_warmed = False
 
 
