@@ -53,6 +53,24 @@ def test_tools_call_calculator() -> None:
     assert content[0]["json"]["result"] == 20.0
 
 
+def test_stdio_answers_each_line_before_reading_the_next(monkeypatch, capsys) -> None:
+    import sys
+
+    from finance_ai.mcp import server as server_module
+
+    seen_after_first_line: list[str] = []
+
+    class _OpenStdin:
+        def __iter__(self):
+            yield '{"jsonrpc": "2.0", "id": 1, "method": "initialize"}\n'
+            seen_after_first_line.append(capsys.readouterr().out)
+            yield '{"jsonrpc": "2.0", "id": 2, "method": "tools/list"}\n'
+
+    monkeypatch.setattr(sys, "stdin", _OpenStdin())
+    server_module.run_stdio_server()
+    assert '"id": 1' in seen_after_first_line[0]
+
+
 def test_unknown_method_returns_error() -> None:
     server = FinanceMcpServer()
     resp = server.handle_jsonrpc(

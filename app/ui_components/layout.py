@@ -88,15 +88,18 @@ def render_sidebar() -> str | None:
         saved: list[str] = []
         for uf in uploaded_files:
             dest = notes_dir / uf.name
-            dest.write_bytes(uf.read())
+            data = uf.getvalue()
+            # Streamlit re-sends uploads on every rerun; rewriting would bump
+            # mtimes and force a full re-embed each time.
+            if dest.exists() and dest.read_bytes() == data:
+                continue
+            dest.write_bytes(data)
             saved.append(uf.name)
-        # So the retriever rebuilds with the new files.
-        try:
+        if saved:
             from finance_ai.rag.service import get_finance_retriever
+
             get_finance_retriever.cache_clear()
-        except Exception:
-            pass
-        sidebar.success(f"Saved {len(saved)} file(s). Index rebuilds on next query.")
+            sidebar.success(f"Saved {len(saved)} file(s). Index rebuilds on next query.")
 
     sidebar.divider()
     sidebar.subheader("Feedback")

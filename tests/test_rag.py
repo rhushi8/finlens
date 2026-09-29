@@ -49,11 +49,8 @@ def test_build_vector_store_and_retrieve_risk_content() -> None:
 @pytest.mark.unit
 def test_build_vector_store_requires_documents() -> None:
     embeddings = SimpleKeywordEmbeddings(dimension=32)
-    try:
+    with pytest.raises(ValueError):
         build_vector_store([], embeddings)
-        assert False, "Expected ValueError for empty document list"
-    except ValueError:
-        assert True
 
 
 def test_save_and_load_vector_store_roundtrip(tmp_path: Path, monkeypatch) -> None:

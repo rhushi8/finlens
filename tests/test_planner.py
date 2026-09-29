@@ -18,7 +18,6 @@ def test_plan_query_compare_needs_two_entities() -> None:
     entities = resolve_company_entities("Compare Apple and Microsoft")
     plan = deterministic_fallback_plan("Compare Apple and Microsoft", entities)
     assert plan.intent == "compare"
-    assert plan.is_comparison is True
     assert plan.requires_news is True
     assert "search_news" in plan.tool_sequence
 
@@ -28,7 +27,6 @@ def test_plan_query_compare_handles_natural_language_phrasing() -> None:
     entities = resolve_company_entities("Which is better, Apple or Microsoft?")
     plan = deterministic_fallback_plan("Which is better, Apple or Microsoft?", entities)
     assert plan.intent == "compare"
-    assert plan.is_comparison is True
 
 
 def test_plan_query_unknown_low_confidence() -> None:
@@ -117,14 +115,3 @@ def test_plan_query_india_macro_without_entities_routes_market_ideas() -> None:
     plan = deterministic_fallback_plan("What is the India macro outlook with inflation?", entities)
     assert plan.intent == "market_ideas"
     assert "get_india_market_ideas" in plan.tool_sequence
-
-
-def test_plan_query_contains_declarative_steps_and_sections() -> None:
-    entities = resolve_company_entities("Compare Apple and Microsoft")
-    plan = plan_query("Compare Apple and Microsoft", entities)
-    assert plan.intent == "compare"
-    assert len(plan.execution_steps) >= 3
-    assert plan.execution_steps[0]["step"] == "plan"
-    assert plan.execution_steps[-1]["step"] == "synthesize"
-    assert "comparison_view" in plan.response_sections
-    assert "decision_rationale" in plan.response_sections

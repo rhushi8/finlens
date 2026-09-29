@@ -122,10 +122,9 @@ class FinanceMcpServer:
             raise ValueError("Tool arguments must be an object")
 
         spec = self._tools[name]
-        if name == "calculate_financial_metric":
-            if "params" not in arguments and "inputs" in arguments:
-                arguments = dict(arguments)
-                arguments["params"] = arguments.pop("inputs")
+        if name == "calculate_financial_metric" and "params" not in arguments and "inputs" in arguments:
+            arguments = dict(arguments)
+            arguments["params"] = arguments.pop("inputs")
         result = spec.handler(**arguments)
         payload = _to_payload(result)
 
@@ -196,29 +195,17 @@ class FinanceMcpServer:
             }
 
 
-def _read_messages() -> list[dict[str, Any]]:
-    messages: list[dict[str, Any]] = []
+def run_stdio_server() -> None:
+    # Answer each line as it arrives; clients keep stdin open between calls.
+    server = FinanceMcpServer()
     for line in sys.stdin:
         line = line.strip()
         if not line:
             continue
         try:
-            messages.append(json.loads(line))
+            request = json.loads(line)
         except json.JSONDecodeError:
-            messages.append(
-                {
-                    "jsonrpc": "2.0",
-                    "id": None,
-                    "method": None,
-                    "params": {},
-                }
-            )
-    return messages
-
-
-def run_stdio_server() -> None:
-    server = FinanceMcpServer()
-    for request in _read_messages():
+            request = {"jsonrpc": "2.0", "id": None, "method": None, "params": {}}
         response = server.handle_jsonrpc(request)
         if response is not None:
             sys.stdout.write(json.dumps(response) + "\n")

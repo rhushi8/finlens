@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import functools
 import hashlib
 import logging
@@ -64,31 +65,18 @@ def _load_cache_entry(cache_path: Path, ttl_seconds: int) -> Any | None:
         logger.debug(f"Cache read failed for {cache_path.name}: {exc}")
         return None
 
-    # Legacy entries lack TTL/version, drop them.
-    if isinstance(entry, dict) and "result" in entry and "ttl_valid" in entry:
-        try:
-            cache_path.unlink(missing_ok=True)
-        except Exception:
-            pass
-        return None
-
     if not isinstance(entry, dict):
         return None
 
-    version = entry.get("version")
     ts = entry.get("ts")
-    if version != CACHE_VERSION or not isinstance(ts, (int, float)):
-        try:
+    # Old-format, wrong-version or expired entries are dropped.
+    if (
+        entry.get("version") != CACHE_VERSION
+        or not isinstance(ts, (int, float))
+        or time.time() - float(ts) >= ttl_seconds
+    ):
+        with contextlib.suppress(OSError):
             cache_path.unlink(missing_ok=True)
-        except Exception:
-            pass
-        return None
-
-    if (time.time() - float(ts)) >= ttl_seconds:
-        try:
-            cache_path.unlink(missing_ok=True)
-        except Exception:
-            pass
         return None
 
     return entry.get("value")

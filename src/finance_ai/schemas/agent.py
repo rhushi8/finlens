@@ -18,18 +18,11 @@ class Citation(BaseModel):
 
 class QueryPlan(BaseModel):
     intent: Literal["price", "fundamentals", "news", "rag", "compare", "market_ideas", "market_general", "unknown"]
-    is_comparison: bool = False
     requires_rag: bool = False
     requires_news: bool = False
-    response_style: Literal["short", "detailed"] = "short"
     confidence_low: bool = False
     tool_sequence: list[str] = Field(default_factory=list)
     reasoning: str = ""
-    execution_steps: list[dict[str, str]] = Field(default_factory=list)
-    response_sections: list[str] = Field(default_factory=list)
-    planning_confidence: float = Field(default=0.65, ge=0.0, le=1.0)
-    tool_choice_rationale: str = ""
-    fallback_tools: list[str] = Field(default_factory=list)
 
 
 class ComparisonLeg(BaseModel):

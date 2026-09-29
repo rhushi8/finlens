@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 import logging
 import time
 from typing import Any
@@ -20,6 +21,17 @@ from finance_ai.tools import get_fundamentals, get_india_market_ideas, get_stock
 from finance_ai.utils.company_resolution import resolve_company_entities, resolve_primary_company
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class _Snapshot:
+    stock_view: dict[str, Any] = field(default_factory=dict)
+    tool_calls: list[ToolTrace] = field(default_factory=list)
+    trend_view: list[str] = field(default_factory=list)
+    news_view: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    evidence_lines: list[str] = field(default_factory=list)
+    source_items: list[SourceItem] = field(default_factory=list)
 
 
 def _company_label(entity) -> str:
@@ -46,42 +58,29 @@ def _run_tool(tool_name: str, input_params: dict[str, Any], fn, *args, **kwargs)
 
 
 def _dedupe(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    unique: list[str] = []
-    for value in values:
-        if value and value not in seen:
-            seen.add(value)
-            unique.append(value)
-    return unique
+    return list(dict.fromkeys(value for value in values if value))
 
 
 def _dedupe_source_items(items: list[SourceItem]) -> list[SourceItem]:
-    unique: list[SourceItem] = []
-    seen: set[tuple[str, str, str]] = set()
+    unique: dict[tuple[str, str, str], SourceItem] = {}
     for item in items:
-        key = (item.title, item.source, item.url or "")
-        if key in seen:
-            continue
-        seen.add(key)
-        unique.append(item)
-    return unique
+        unique.setdefault((item.title, item.source, item.url or ""), item)
+    return list(unique.values())
 
 
 def _build_citations(source_items: list[SourceItem], ticker: str | None) -> list[Citation]:
-    citations: list[Citation] = []
-    for item in source_items:
-        citations.append(
-            Citation(
-                title=item.title,
-                source=item.source,
-                url=item.url,
-                ticker=ticker,
-                source_type=item.source_type or "market_or_doc",
-                published_at=item.date,
-                snippet=item.snippet,
-            )
+    return [
+        Citation(
+            title=item.title,
+            source=item.source,
+            url=item.url,
+            ticker=ticker,
+            source_type=item.source_type or "market_or_doc",
+            published_at=item.date,
+            snippet=item.snippet,
         )
-    return citations
+        for item in source_items
+    ]
 
 
 def _query_relevance(query: str, evidence_lines: list[str]) -> float:
@@ -110,6 +109,24 @@ def _comparison_bear_points(leg: ComparisonLeg) -> list[str]:
     if not points:
         points.append(f"Monitor {leg.company_name} for earnings revisions and sentiment shifts.")
     return points[:3]
+
+
+def _comparison_leg(entity, snap: _Snapshot) -> ComparisonLeg:
+    stock = snap.stock_view
+    leg = ComparisonLeg(
+        ticker=entity.ticker,
+        company_name=entity.company_name,
+        price=stock.get("current_price"),
+        change_pct_1m=stock.get("change_pct"),
+        pe_ratio=stock.get("pe_ratio"),
+        market_cap=stock.get("market_cap"),
+        dividend_yield=stock.get("dividend_yield"),
+        beta=stock.get("beta"),
+        news_highlights=snap.news_view[:2],
+        bull_points=snap.trend_view[:2],
+    )
+    leg.bear_points = _comparison_bear_points(leg)
+    return leg
 
 
 def _compute_comparison_decision(left: ComparisonLeg, right: ComparisonLeg) -> tuple[str, str, str, list[str]]:
@@ -154,9 +171,7 @@ def _compute_comparison_decision(left: ComparisonLeg, right: ComparisonLeg) -> t
     if total_weight == 0:
         return "Balanced", "HOLD", "Not enough overlapping comparable metrics to determine a winner.", deltas
 
-    left_norm = left_score / total_weight
-    right_norm = right_score / total_weight
-    gap = left_norm - right_norm
+    gap = (left_score - right_score) / total_weight
 
     if gap > 0.14:
         return left.company_name, "BUY", f"{left.company_name} scores higher across available comparison metrics.", deltas
@@ -167,68 +182,44 @@ def _compute_comparison_decision(left: ComparisonLeg, right: ComparisonLeg) -> t
 
 def _run_company_snapshot(
     *,
-    entity,
+    ticker: str | None,
+    label: str,
+    news_query: str,
     need_price: bool,
     need_fundamentals: bool,
     need_news: bool,
-) -> tuple[dict[str, Any], list[ToolTrace], list[str], list[str], list[str], list[str], list[SourceItem]]:
-    ticker = entity.ticker
-    company_name = entity.company_name
+    news_max: int = 3,
+) -> _Snapshot:
+    snap = _Snapshot()
 
-    stock_view: dict[str, Any] = {}
-    trend_view: list[str] = []
-    news_view: list[str] = []
-    warnings: list[str] = []
-    evidence_lines: list[str] = []
-    tool_calls: list[ToolTrace] = []
-    source_items: list[SourceItem] = []
-
-    tasks: list[tuple[str, Any]] = []
     with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {}
         if need_price:
-            price_future = executor.submit(
-                _run_tool,
-                "get_stock_price",
-                {"ticker": ticker, "period": "1mo"},
-                get_stock_price,
-                ticker,
-                period="1mo",
+            futures["price"] = executor.submit(
+                _run_tool, "get_stock_price", {"ticker": ticker, "period": "1mo"}, get_stock_price, ticker, period="1mo"
             )
-            tasks.append(("price", price_future))
-
         if need_fundamentals:
-            fundamentals_future = executor.submit(
-                _run_tool,
-                "get_fundamentals",
-                {"ticker": ticker},
-                get_fundamentals,
-                ticker,
+            futures["fundamentals"] = executor.submit(
+                _run_tool, "get_fundamentals", {"ticker": ticker}, get_fundamentals, ticker
             )
-            tasks.append(("fundamentals", fundamentals_future))
-
         if need_news:
-            news_future = executor.submit(
+            futures["news"] = executor.submit(
                 _run_tool,
                 "search_news",
-                {"query": company_name or ticker, "max_results": 3},
+                {"query": news_query, "max_results": news_max},
                 search_news,
-                company_name or ticker,
-                max_results=3,
+                news_query,
+                max_results=news_max,
             )
-            tasks.append(("news", news_future))
-
-        completed: dict[str, tuple[Any, ToolTrace]] = {}
-        future_to_task = {future: task_name for task_name, future in tasks}
-        for future in as_completed(future_to_task):
-            completed[future_to_task[future]] = future.result()
+        completed = {name: future.result() for name, future in futures.items()}
 
     if "price" in completed:
         price_resp, trace = completed["price"]
-        tool_calls.append(trace)
+        snap.tool_calls.append(trace)
         if price_resp.error:
-            warnings.append(price_resp.error)
+            snap.warnings.append(price_resp.error)
         else:
-            stock_view.update(
+            snap.stock_view.update(
                 {
                     "current_price": price_resp.current_price,
                     "change_pct": price_resp.change_pct,
@@ -238,34 +229,29 @@ def _run_company_snapshot(
                 }
             )
             if price_resp.data_points:
-                stock_view["price_series"] = [
-                    {
-                        "date": item.date.isoformat(),
-                        "close": item.close,
-                        "volume": item.volume,
-                    }
+                snap.stock_view["price_series"] = [
+                    {"date": item.date.isoformat(), "close": item.close, "volume": item.volume}
                     for item in price_resp.data_points[-60:]
                 ]
-            line = f"{company_name} moved {price_resp.change_pct:+.2f}% over {price_resp.period}."
-            trend_view.append(line)
-            evidence_lines.append(line)
-            source_label = f"yfinance: {ticker} {price_resp.period} OHLCV"
-            source_items.append(
+            line = f"{label} moved {price_resp.change_pct:+.2f}% over {price_resp.period}."
+            snap.trend_view.append(line)
+            snap.evidence_lines.append(line)
+            snap.source_items.append(
                 SourceItem(
-                    title=f"{company_name} price history",
+                    title=f"{label} price history",
                     source_type="market_data",
-                    source=source_label,
+                    source=f"yfinance: {ticker} {price_resp.period} OHLCV",
                     snippet=line,
                 )
             )
 
     if "fundamentals" in completed:
         fund_resp, trace = completed["fundamentals"]
-        tool_calls.append(trace)
+        snap.tool_calls.append(trace)
         if fund_resp.error:
-            warnings.append(fund_resp.error)
+            snap.warnings.append(fund_resp.error)
         else:
-            stock_view.update(
+            snap.stock_view.update(
                 {
                     "market_cap": fund_resp.market_cap,
                     "pe_ratio": fund_resp.pe_ratio,
@@ -273,29 +259,28 @@ def _run_company_snapshot(
                     "beta": fund_resp.beta,
                 }
             )
-            line = f"{company_name} fundamentals: market cap {fund_resp.market_cap}, P/E {fund_resp.pe_ratio}, beta {fund_resp.beta}."
-            trend_view.append(line)
-            evidence_lines.append(line)
-            source_label = f"yfinance: {ticker} fundamentals"
-            source_items.append(
+            line = f"{label} fundamentals: market cap {fund_resp.market_cap}, P/E {fund_resp.pe_ratio}, beta {fund_resp.beta}."
+            snap.trend_view.append(line)
+            snap.evidence_lines.append(line)
+            snap.source_items.append(
                 SourceItem(
-                    title=f"{company_name} fundamentals",
+                    title=f"{label} fundamentals",
                     source_type="fundamentals",
-                    source=source_label,
+                    source=f"yfinance: {ticker} fundamentals",
                     snippet=line,
                 )
             )
 
     if "news" in completed:
         news_resp, trace = completed["news"]
-        tool_calls.append(trace)
+        snap.tool_calls.append(trace)
         if news_resp.error:
-            warnings.append(news_resp.error)
+            snap.warnings.append(news_resp.error)
         for article in news_resp.articles:
             bullet = f"{article.title} ({article.source})"
-            news_view.append(bullet)
-            evidence_lines.append(bullet)
-            source_items.append(
+            snap.news_view.append(bullet)
+            snap.evidence_lines.append(bullet)
+            snap.source_items.append(
                 SourceItem(
                     title=article.title,
                     source_type="news",
@@ -306,34 +291,7 @@ def _run_company_snapshot(
                 )
             )
 
-    return stock_view, tool_calls, trend_view, news_view, warnings, evidence_lines, source_items
-
-
-def _run_compare_snapshots_parallel(
-    *,
-    left_entity,
-    right_entity,
-    need_price: bool,
-    need_fundamentals: bool,
-    need_news: bool,
-):
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        left_future = executor.submit(
-            _run_company_snapshot,
-            entity=left_entity,
-            need_price=need_price,
-            need_fundamentals=need_fundamentals,
-            need_news=need_news,
-        )
-        right_future = executor.submit(
-            _run_company_snapshot,
-            entity=right_entity,
-            need_price=need_price,
-            need_fundamentals=need_fundamentals,
-            need_news=need_news,
-        )
-
-        return left_future.result(), right_future.result()
+    return snap
 
 
 def route_query(
@@ -376,7 +334,7 @@ def route_query(
 
     if plan.intent == "unknown":
         latency_ms = (time.time() - started) * 1000
-        answer = AnalystAnswer(
+        return AnalystAnswer(
             query=query,
             ticker=ticker,
             company_name=company_name,
@@ -392,7 +350,6 @@ def route_query(
             warnings=["No clear entity detected."],
             error="No ticker found",
         )
-        return answer
 
     try:
         if plan.intent == "compare" and len(comparison_entities) >= 2:
@@ -401,63 +358,29 @@ def route_query(
             need_fundamentals = "get_fundamentals" in plan.tool_sequence
             need_news = "search_news" in plan.tool_sequence or plan.requires_news
 
-            (
-                left_stock,
-                left_calls,
-                left_trend,
-                left_news,
-                left_warnings,
-                left_evidence,
-                left_source_items,
-            ), (
-                right_stock,
-                right_calls,
-                right_trend,
-                right_news,
-                right_warnings,
-                right_evidence,
-                right_source_items,
-            ) = _run_compare_snapshots_parallel(
-                left_entity=left_entity,
-                right_entity=right_entity,
-                need_price=need_price,
-                need_fundamentals=need_fundamentals,
-                need_news=need_news,
-            )
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                left, right = executor.map(
+                    lambda entity: _run_company_snapshot(
+                        ticker=entity.ticker,
+                        label=entity.company_name,
+                        news_query=entity.company_name or entity.ticker,
+                        need_price=need_price,
+                        need_fundamentals=need_fundamentals,
+                        need_news=need_news,
+                    ),
+                    comparison_entities,
+                )
 
-            tool_calls.extend(left_calls + right_calls)
-            warnings.extend(left_warnings + right_warnings)
-            trend_view.extend(left_trend + right_trend)
-            news_view.extend(left_news + right_news)
-            evidence_lines.extend(left_evidence + right_evidence)
-            source_items.extend(left_source_items + right_source_items)
+            for snap in (left, right):
+                tool_calls.extend(snap.tool_calls)
+                warnings.extend(snap.warnings)
+                trend_view.extend(snap.trend_view)
+                news_view.extend(snap.news_view)
+                evidence_lines.extend(snap.evidence_lines)
+                source_items.extend(snap.source_items)
 
-            left_leg = ComparisonLeg(
-                ticker=left_entity.ticker,
-                company_name=left_entity.company_name,
-                price=left_stock.get("current_price"),
-                change_pct_1m=left_stock.get("change_pct"),
-                pe_ratio=left_stock.get("pe_ratio"),
-                market_cap=left_stock.get("market_cap"),
-                dividend_yield=left_stock.get("dividend_yield"),
-                beta=left_stock.get("beta"),
-                news_highlights=left_news[:2],
-                bull_points=left_trend[:2],
-            )
-            left_leg.bear_points = _comparison_bear_points(left_leg)
-            right_leg = ComparisonLeg(
-                ticker=right_entity.ticker,
-                company_name=right_entity.company_name,
-                price=right_stock.get("current_price"),
-                change_pct_1m=right_stock.get("change_pct"),
-                pe_ratio=right_stock.get("pe_ratio"),
-                market_cap=right_stock.get("market_cap"),
-                dividend_yield=right_stock.get("dividend_yield"),
-                beta=right_stock.get("beta"),
-                news_highlights=right_news[:2],
-                bull_points=right_trend[:2],
-            )
-            right_leg.bear_points = _comparison_bear_points(right_leg)
+            left_leg = _comparison_leg(left_entity, left)
+            right_leg = _comparison_leg(right_entity, right)
 
             winner_name, comparison_recommendation, decision_rationale, key_differences = _compute_comparison_decision(left_leg, right_leg)
             comparison_view = ComparisonView(
@@ -476,19 +399,11 @@ def route_query(
                 model_name=model_name,
                 is_comparison=True,
             )
-            stock_view = {
-                "left": left_stock,
-                "right": right_stock,
-            }
+            stock_view = {"left": left.stock_view, "right": right.stock_view}
+            pairs = ((left_entity, left), (right_entity, right))
             chart_data = {
-                "comparison_price_change_pct": {
-                    left_entity.ticker: left_stock.get("change_pct"),
-                    right_entity.ticker: right_stock.get("change_pct"),
-                },
-                "comparison_pe_ratio": {
-                    left_entity.ticker: left_stock.get("pe_ratio"),
-                    right_entity.ticker: right_stock.get("pe_ratio"),
-                },
+                "comparison_price_change_pct": {e.ticker: s.stock_view.get("change_pct") for e, s in pairs},
+                "comparison_pe_ratio": {e.ticker: s.stock_view.get("pe_ratio") for e, s in pairs},
             }
             sources.extend([item.source for item in source_items if item.source])
             bull_case = _dedupe(left_leg.bull_points + right_leg.bull_points)[:4]
@@ -498,114 +413,30 @@ def route_query(
             recommendation = comparison_recommendation
             if not decision_rationale:
                 decision_rationale = model_rationale
-        elif plan.intent in {"price", "compare"} and ticker and "get_stock_price" in plan.tool_sequence:
-            price_resp, trace = _run_tool(
-                "get_stock_price",
-                {"ticker": ticker, "period": "1mo"},
-                get_stock_price,
-                ticker,
-                period="1mo",
+        else:
+            snap = _run_company_snapshot(
+                ticker=ticker,
+                label=_company_label(primary),
+                news_query=company_name or ticker or query,
+                need_price=bool(ticker)
+                and plan.intent in {"price", "compare"}
+                and "get_stock_price" in plan.tool_sequence,
+                need_fundamentals=bool(ticker)
+                and plan.intent == "fundamentals"
+                and "get_fundamentals" in plan.tool_sequence,
+                need_news=plan.intent != "compare"
+                and (plan.requires_news or "search_news" in plan.tool_sequence),
+                news_max=5,
             )
-            tool_calls.append(trace)
-            if price_resp.error:
-                warnings.append(price_resp.error)
-                errors.append(price_resp.error)
-            else:
-                stock_view.update(
-                    {
-                        "current_price": price_resp.current_price,
-                        "change_pct": price_resp.change_pct,
-                        "period_high": price_resp.period_high,
-                        "period_low": price_resp.period_low,
-                        "avg_volume": price_resp.volume_avg,
-                    }
-                )
-                if price_resp.data_points:
-                    stock_view["price_series"] = [
-                        {
-                            "date": item.date.isoformat(),
-                            "close": item.close,
-                            "volume": item.volume,
-                        }
-                        for item in price_resp.data_points[-60:]
-                    ]
-                trend_view.append(
-                    f"{_company_label(primary)} moved {price_resp.change_pct:+.2f}% over {price_resp.period}."
-                )
-                evidence_lines.append(trend_view[-1])
-                sources.append(f"yfinance: {ticker} {price_resp.period} OHLCV")
-                source_items.append(
-                    SourceItem(
-                        title=f"{_company_label(primary)} price history",
-                        source_type="market_data",
-                        source=f"yfinance: {ticker} {price_resp.period} OHLCV",
-                        snippet=trend_view[-1],
-                    )
-                )
-                chart_data["price_series"] = stock_view.get("price_series", [])
-
-        if plan.intent == "fundamentals" and ticker and "get_fundamentals" in plan.tool_sequence:
-            fund_resp, trace = _run_tool(
-                "get_fundamentals",
-                {"ticker": ticker},
-                get_fundamentals,
-                ticker,
-            )
-            tool_calls.append(trace)
-            if fund_resp.error:
-                warnings.append(fund_resp.error)
-                errors.append(fund_resp.error)
-            else:
-                stock_view.update(
-                    {
-                        "market_cap": fund_resp.market_cap,
-                        "pe_ratio": fund_resp.pe_ratio,
-                        "dividend_yield": fund_resp.dividend_yield,
-                        "beta": fund_resp.beta,
-                    }
-                )
-                trend_view.append(
-                    f"Fundamentals: market cap {fund_resp.market_cap}, P/E {fund_resp.pe_ratio}, beta {fund_resp.beta}."
-                )
-                evidence_lines.append(trend_view[-1])
-                sources.append(f"yfinance: {ticker} fundamentals")
-                source_items.append(
-                    SourceItem(
-                        title=f"{_company_label(primary)} fundamentals",
-                        source_type="fundamentals",
-                        source=f"yfinance: {ticker} fundamentals",
-                        snippet=trend_view[-1],
-                    )
-                )
-
-        if (plan.requires_news or "search_news" in plan.tool_sequence) and plan.intent != "compare":
-            news_query = company_name or ticker or query
-            news_resp, trace = _run_tool(
-                "search_news",
-                {"query": news_query, "max_results": 5},
-                search_news,
-                news_query,
-                max_results=5,
-            )
-            tool_calls.append(trace)
-            if news_resp.error:
-                warnings.append(news_resp.error)
-                errors.append(news_resp.error)
-            for article in news_resp.articles:
-                bullet = f"{article.title} ({article.source})"
-                news_view.append(bullet)
-                evidence_lines.append(bullet)
-                sources.append(article.url)
-                source_items.append(
-                    SourceItem(
-                        title=article.title,
-                        source_type="news",
-                        source=article.source,
-                        url=article.url,
-                        date=article.published_date,
-                        snippet=article.summary,
-                    )
-                )
+            tool_calls.extend(snap.tool_calls)
+            warnings.extend(snap.warnings)
+            errors.extend(snap.warnings)
+            stock_view.update(snap.stock_view)
+            trend_view.extend(snap.trend_view)
+            news_view.extend(snap.news_view)
+            evidence_lines.extend(snap.evidence_lines)
+            source_items.extend(snap.source_items)
+            sources.extend(item.url or item.source for item in snap.source_items)
 
         if "get_india_market_ideas" in plan.tool_sequence:
             ideas_resp, trace = _run_tool(
@@ -620,18 +451,19 @@ def route_query(
                 warnings.append(ideas_resp.error)
                 errors.append(ideas_resp.error)
             if ideas_resp.market_snapshot:
+                snapshot = ideas_resp.market_snapshot
                 stock_view.update(
                     {
-                        "india_universe_size": ideas_resp.market_snapshot.get("universe_size"),
-                        "india_screened": ideas_resp.market_snapshot.get("screened"),
-                        "india_risk_profile": ideas_resp.market_snapshot.get("risk_profile"),
-                        "india_advancers": ideas_resp.market_snapshot.get("market_breadth", {}).get("advancers"),
-                        "india_decliners": ideas_resp.market_snapshot.get("market_breadth", {}).get("decliners"),
-                        "india_nifty_1m_pct": ideas_resp.market_snapshot.get("index_snapshot_1m_pct", {}).get("NIFTY50"),
-                        "india_sensex_1m_pct": ideas_resp.market_snapshot.get("index_snapshot_1m_pct", {}).get("SENSEX"),
+                        "india_universe_size": snapshot.get("universe_size"),
+                        "india_screened": snapshot.get("screened"),
+                        "india_risk_profile": snapshot.get("risk_profile"),
+                        "india_advancers": snapshot.get("market_breadth", {}).get("advancers"),
+                        "india_decliners": snapshot.get("market_breadth", {}).get("decliners"),
+                        "india_nifty_1m_pct": snapshot.get("index_snapshot_1m_pct", {}).get("NIFTY50"),
+                        "india_sensex_1m_pct": snapshot.get("index_snapshot_1m_pct", {}).get("SENSEX"),
                     }
                 )
-                leaders = ideas_resp.market_snapshot.get("sector_leaders", [])
+                leaders = snapshot.get("sector_leaders", [])
                 if leaders:
                     trend_view.append(f"India sector leadership snapshot: {', '.join(leaders)}.")
                     evidence_lines.append(trend_view[-1])
@@ -680,11 +512,9 @@ def route_query(
             for item in retrieval.results:
                 snippet = " ".join(item.text.split())
                 clipped = snippet[:220] + ("..." if len(snippet) > 220 else "")
-                evidence_line = f"{item.title}: {clipped}"
-                evidence_lines.append(evidence_line)
+                evidence_lines.append(f"{item.title}: {clipped}")
                 risk_view.append(clipped.split(".")[0])
-                src = item.metadata.get("source_url") or item.source
-                sources.append(src)
+                sources.append(item.metadata.get("source_url") or item.source)
                 source_items.append(
                     SourceItem(
                         title=item.title,
@@ -718,16 +548,13 @@ def route_query(
 
         sources = _dedupe(sources)
         source_items = _dedupe_source_items([item for item in source_items if item.source])
-        relevance = _query_relevance(query, evidence_lines)
-        unsupported_claims = 0 if evidence_lines else 1
-        source_types = [item.source_type for item in source_items]
         grounding_score, quality_warnings = assess_grounding(
             evidence_lines=evidence_lines,
             sources=sources,
             tool_trace_count=len(successful_traces),
-            source_types=source_types,
-            query_relevance=relevance,
-            unsupported_claims=unsupported_claims,
+            source_types=[item.source_type for item in source_items],
+            query_relevance=_query_relevance(query, evidence_lines),
+            unsupported_claims=0 if evidence_lines else 1,
             expected_claims=max(1, len((summary or "").split("."))),
         )
         warnings.extend(quality_warnings)
@@ -738,9 +565,8 @@ def route_query(
             score=grounding_score,
         )
 
-        base_confidence = 0.78 if successful_traces else 0.35
         calibrated_confidence = calibrate_confidence(
-            base_confidence=base_confidence,
+            base_confidence=0.78 if successful_traces else 0.35,
             grounding_score=grounding_score,
             has_error=False,
         )
@@ -754,10 +580,7 @@ def route_query(
         if not bull_case and not bear_case:
             bull_case, bear_case = _extract_cases(trend_view, risk_view, news_view)
 
-        citations = _build_citations(source_items, ticker)
-        latency_ms = (time.time() - started) * 1000
-
-        answer = AnalystAnswer(
+        return AnalystAnswer(
             query=query,
             ticker=ticker,
             company_name=company_name,
@@ -772,23 +595,21 @@ def route_query(
             stock_view=stock_view,
             news_view=news_view,
             trend_view=trend_view,
-            risk_view=_dedupe([item for item in risk_view if item]),
+            risk_view=_dedupe(risk_view),
             recommendation=recommendation,
             recommendation_confidence=calibrated_confidence,
             grounding_score=grounding_score,
             tool_calls=tool_calls,
-            citations=citations,
+            citations=_build_citations(source_items, ticker),
             source_count=len(sources),
-            latency_ms=latency_ms,
+            latency_ms=(time.time() - started) * 1000,
             warnings=_dedupe(warnings + [plan.reasoning]),
             error="; ".join(_dedupe(errors)) if errors else None,
         )
-        return answer
 
     except Exception as exc:
         logger.error("Error in route_query: %s", exc)
-        latency_ms = (time.time() - started) * 1000
-        answer = AnalystAnswer(
+        return AnalystAnswer(
             query=query,
             ticker=ticker,
             company_name=company_name,
@@ -810,11 +631,10 @@ def route_query(
             tool_calls=tool_calls,
             citations=_build_citations(_dedupe_source_items(source_items), ticker),
             source_count=len(_dedupe(sources)),
-            latency_ms=latency_ms,
+            latency_ms=(time.time() - started) * 1000,
             warnings=_dedupe(warnings + [str(exc)]),
             error=str(exc),
         )
-        return answer
 
 
 def extract_ticker(query: str) -> str | None:
