@@ -28,14 +28,12 @@ class TestStockTools:
             index=index,
         )
 
-        def fake_download(ticker, period="1mo", progress=False, session=None):
-            if ticker == "INVALID123456":
-                return pd.DataFrame()
-            return hist
-
         class FakeTicker:
             def __init__(self, symbol, session=None):
                 self.symbol = symbol
+
+            def history(self, period="1mo"):
+                return pd.DataFrame() if self.symbol == "INVALID123456" else hist
 
             @property
             def info(self):
@@ -53,7 +51,6 @@ class TestStockTools:
                     "beta": 1.2,
                 }
 
-        monkeypatch.setattr(stock_module.yf, "download", fake_download)
         monkeypatch.setattr(stock_module.yf, "Ticker", FakeTicker)
 
     def test_get_stock_price_valid_ticker(self) -> None:

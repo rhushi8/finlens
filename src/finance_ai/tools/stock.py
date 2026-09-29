@@ -2,7 +2,6 @@ import logging
 import re
 from datetime import datetime
 
-import pandas as pd
 import yfinance as yf
 
 from finance_ai.schemas.tools import (
@@ -20,15 +19,6 @@ def _is_valid_ticker(ticker: str) -> bool:
     if not ticker:
         return False
     return bool(VALID_TICKER.match(ticker))
-
-
-def _normalize_history_frame(hist: pd.DataFrame, ticker: str) -> pd.DataFrame:
-    if isinstance(hist.columns, pd.MultiIndex):
-        if ticker in hist.columns.get_level_values(-1):
-            return hist.xs(ticker, axis=1, level=-1, drop_level=True)
-        first_symbol = hist.columns.get_level_values(-1)[0]
-        return hist.xs(first_symbol, axis=1, level=-1, drop_level=True)
-    return hist
 
 
 @cached(ttl_seconds=300)
@@ -49,7 +39,8 @@ def get_stock_price(ticker: str, period: str = "1mo") -> StockPriceResponse:
                 error=f"Invalid ticker format: {ticker}",
             )
 
-        hist = yf.download(ticker, period=period, progress=False)
+        # Not yf.download: it shares one global result dict, so parallel calls swap tickers.
+        hist = yf.Ticker(ticker).history(period=period)
 
         if hist is None or hist.empty:
             return StockPriceResponse(
@@ -64,8 +55,6 @@ def get_stock_price(ticker: str, period: str = "1mo") -> StockPriceResponse:
                 retrieved_at=datetime.now(),
                 error=f"No data found for {ticker}",
             )
-
-        hist = _normalize_history_frame(hist, ticker)
 
         current_price = float(hist["Close"].iloc[-1])
         period_open = float(hist["Open"].iloc[0])
