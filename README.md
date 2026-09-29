@@ -20,7 +20,9 @@ and is honest about the evidence behind each claim.
 
 A planner classifies the intent, price, fundamentals, news, comparison or
 market ideas, and routes to the right tools. It runs in `rule`, `hybrid` or
-`llm` mode, with a deterministic fallback so it never hard-fails.
+`llm` mode, with a deterministic fallback so it never hard-fails. In hybrid,
+the default, the rules decide and the LLM is only asked about queries they
+can't place, and any LLM plan naming a tool the router doesn't have is dropped.
 
 Tools run in parallel: live price and fundamentals from yfinance, free news
 from GDELT, and an India market scanner covering NIFTY and SENSEX.

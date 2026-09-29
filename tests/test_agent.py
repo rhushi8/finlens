@@ -36,7 +36,16 @@ class _FakeRetriever:
 
 @pytest.fixture(autouse=True)
 def _mock_agent_dependencies(monkeypatch):
+    import finance_ai.agents.planner as planner
     import finance_ai.agents.router as router
+    import finance_ai.agents.synthesis as synthesis
+
+    # Keep these tests independent of whether Ollama happens to be running.
+    def no_llm(*args, **kwargs):
+        raise ConnectionError("LLM disabled in tests")
+
+    monkeypatch.setattr(planner, "invoke_ollama", no_llm)
+    monkeypatch.setattr(synthesis, "invoke_ollama", no_llm)
 
     def fake_price(ticker: str, period: str = "1mo"):
         return StockPriceResponse(

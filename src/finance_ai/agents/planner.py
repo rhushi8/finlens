@@ -34,6 +34,7 @@ BUY_SELL_KEYWORDS = {
     "stocks to sell",
     "investment ideas",
 }
+KNOWN_TOOLS = {"get_stock_price", "get_fundamentals", "search_news", "get_india_market_ideas", "rag_retriever"}
 MARKET_GENERAL_KEYWORDS = {
     "market",
     "global",
@@ -73,6 +74,7 @@ def _llm_plan(query: str, entities: list[ResolvedCompany]) -> QueryPlan | None:
         "You are a financial query planner. Return ONLY valid JSON with keys: "
         "intent, requires_rag, requires_news, confidence_low, tool_sequence, reasoning. "
         "intent must be one of: price,fundamentals,news,rag,compare,market_ideas,market_general,unknown. "
+        f"tool_sequence may only use: {','.join(sorted(KNOWN_TOOLS))}. "
         f"Query: {query}\n"
         f"Entities: {entity_payload}\n"
     )
@@ -162,10 +164,16 @@ def plan_query(
     mode = (planner_mode or get_settings().agent_planner_mode).lower()
     plan = deterministic_fallback_plan(query, entities)
 
-    if mode in {"llm", "hybrid"}:
+    # hybrid: rules first, the LLM only for queries they can't place. llm: LLM first.
+    if mode == "llm" or (mode == "hybrid" and plan.intent == "unknown"):
         llm_plan = _llm_plan(query, entities)
-        # Never let an LLM 'unknown' downgrade a good deterministic plan.
-        if llm_plan is not None and (llm_plan.intent != "unknown" or plan.intent == "unknown"):
+        # The LLM may invent tool names; only take plans the router can actually run.
+        if (
+            llm_plan is not None
+            and llm_plan.tool_sequence
+            and set(llm_plan.tool_sequence) <= KNOWN_TOOLS
+            and (llm_plan.intent != "unknown" or plan.intent == "unknown")
+        ):
             plan = llm_plan
 
     if plan.intent in {"price", "fundamentals"} and plan.confidence_low:

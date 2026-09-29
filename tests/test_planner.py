@@ -61,6 +61,24 @@ def test_plan_query_llm_mode_parses_json(monkeypatch) -> None:
     assert plan.requires_news is True
 
 
+def test_plan_query_ignores_llm_plan_with_invented_tools(monkeypatch) -> None:
+    import finance_ai.agents.planner as planner_module
+
+    class _Settings:
+        agent_planner_mode = "llm"
+
+    monkeypatch.setattr(planner_module, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(
+        planner_module,
+        "invoke_ollama",
+        lambda prompt: '{"intent":"price","tool_sequence":["fetch_current_price"],"reasoning":"llm"}',
+    )
+
+    entities = resolve_company_entities("What is the price of AAPL?")
+    plan = plan_query("What is the price of AAPL?", entities)
+    assert plan.tool_sequence == ["get_stock_price"]
+
+
 def test_plan_query_llm_fallback_on_invalid_json(monkeypatch) -> None:
     import finance_ai.agents.planner as planner_module
 
