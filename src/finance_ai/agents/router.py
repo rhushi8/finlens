@@ -390,10 +390,9 @@ def route_query(
             source_count=0,
             latency_ms=latency_ms,
             warnings=["No clear entity detected."],
-            confidence=0.0,
             error="No ticker found",
         )
-        return answer.sync_legacy_fields()
+        return answer
 
     try:
         if plan.intent == "compare" and len(comparison_entities) >= 2:
@@ -782,10 +781,9 @@ def route_query(
             source_count=len(sources),
             latency_ms=latency_ms,
             warnings=_dedupe(warnings + [plan.reasoning]),
-            confidence=calibrated_confidence,
             error="; ".join(_dedupe(errors)) if errors else None,
         )
-        return answer.sync_legacy_fields()
+        return answer
 
     except Exception as exc:
         logger.error("Error in route_query: %s", exc)
@@ -814,10 +812,9 @@ def route_query(
             source_count=len(_dedupe(sources)),
             latency_ms=latency_ms,
             warnings=_dedupe(warnings + [str(exc)]),
-            confidence=0.0,
             error=str(exc),
         )
-        return answer.sync_legacy_fields()
+        return answer
 
 
 def extract_ticker(query: str) -> str | None:

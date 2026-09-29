@@ -88,29 +88,5 @@ class AnalystAnswer(BaseModel):
     source_count: int = 0
     latency_ms: float = 0.0
     warnings: list[str] = Field(default_factory=list)
-
-    # Kept for older UI/tests.
-    thesis: str = Field(default="", description="Legacy alias of summary")
-    key_metrics: dict = Field(default_factory=dict, description="Legacy metrics field")
-    risks: list[str] = Field(default_factory=list, description="Legacy risk list")
-    sources: list[str] = Field(default_factory=list, description="Legacy source list")
-    tool_trace: list[ToolTrace] = Field(default_factory=list, description="Legacy tool trace")
     generated_at: datetime = Field(default_factory=datetime.now)
-    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     error: Optional[str] = None
-
-    def sync_legacy_fields(self) -> "AnalystAnswer":
-        if not self.thesis:
-            self.thesis = self.summary
-        if not self.risks:
-            self.risks = list(self.risk_view)
-        if not self.sources:
-            self.sources = [citation.source for citation in self.citations]
-        if not self.tool_trace:
-            self.tool_trace = list(self.tool_calls)
-        if not self.key_metrics:
-            self.key_metrics = {
-                **self.stock_view,
-                "grounding_score": self.grounding_score,
-            }
-        return self

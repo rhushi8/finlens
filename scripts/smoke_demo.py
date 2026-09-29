@@ -18,10 +18,10 @@ def main() -> None:
     for query in DEMO_QUERIES:
         answer = route_query(query)
         print(f"Q: {query}")
-        print(f"A: {answer.thesis}")
-        print(f"Confidence: {answer.confidence:.2f}")
-        print(f"Tools: {[trace.tool_name for trace in answer.tool_trace]}")
-        print(f"Sources: {len(answer.sources)}")
+        print(f"A: {answer.summary}")
+        print(f"Confidence: {answer.recommendation_confidence:.2f}")
+        print(f"Tools: {[trace.tool_name for trace in answer.tool_calls]}")
+        print(f"Sources: {answer.source_count}")
         print("-" * 40)
 
 

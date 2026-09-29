@@ -15,7 +15,6 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_env: str = Field(default="dev", validation_alias="APP_ENV")
     ollama_model: str = Field(
         default="qwen2.5:7b-instruct", validation_alias="OLLAMA_MODEL"
     )
@@ -30,9 +29,6 @@ class Settings(BaseSettings):
     )
     low_grounding_threshold: float = Field(
         default=0.45, validation_alias="FINANCE_AI_LOW_GROUNDING_THRESHOLD"
-    )
-    show_debug_panels: bool = Field(
-        default=False, validation_alias="FINANCE_AI_SHOW_DEBUG_PANELS"
     )
     agent_planner_mode: str = Field(
         default="hybrid", validation_alias="FINANCE_AI_AGENT_PLANNER_MODE"

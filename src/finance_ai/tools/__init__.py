@@ -31,17 +31,10 @@ def search_news(*args: Any, **kwargs: Any):
     return _search_news(*args, **kwargs)
 
 
-def retrieve_finance_context(*args: Any, **kwargs: Any):
-    from finance_ai.tools.retrieval import retrieve_finance_context as _retrieve_finance_context
-
-    return _retrieve_finance_context(*args, **kwargs)
-
-
 __all__ = [
     "get_stock_price",
     "get_fundamentals",
     "get_india_market_ideas",
     "calculate_financial_metric",
     "search_news",
-    "retrieve_finance_context",
 ]

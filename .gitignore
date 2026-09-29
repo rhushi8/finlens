@@ -142,21 +142,6 @@ data/
 # OS
 .DS_Store
 Thumbs.db
-venv/
-.venv/
-env/
-__pycache__/
-*.py[cod]
-*.egg-info/
-.pytest_cache/
-.ipynb_checkpoints/
-.env
+
 *.env
-.cache.zip
-**/cache/
-data/cache/
-*.log
-.DS_Store
-Thumbs.db
 .claude/
-test_tmp/

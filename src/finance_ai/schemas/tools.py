@@ -4,13 +4,6 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-class StockPriceRequest(BaseModel):
-    ticker: str = Field(..., description="Stock ticker symbol (e.g., AAPL, MSFT)")
-    period: str = Field(
-        default="1mo", description="Time period (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)"
-    )
-
-
 class StockPricePoint(BaseModel):
     date: datetime
     open: float
@@ -36,10 +29,6 @@ class StockPriceResponse(BaseModel):
     error: Optional[str] = None
 
 
-class FundamentalsRequest(BaseModel):
-    ticker: str = Field(..., description="Stock ticker symbol")
-
-
 class FundamentalsResponse(BaseModel):
     ticker: str
     company_name: Optional[str] = None
@@ -53,14 +42,6 @@ class FundamentalsResponse(BaseModel):
     beta: Optional[float] = None
     retrieved_at: datetime
     error: Optional[str] = None
-
-
-class CalculatorRequest(BaseModel):
-    operation: str = Field(
-        ...,
-        description="Operation type: pct_change, price_target, pe_multiple, dividend_income",
-    )
-    params: dict = Field(..., description="Parameters for the operation")
 
 
 class CalculatorResponse(BaseModel):

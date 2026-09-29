@@ -1,11 +1,4 @@
-from pathlib import Path
-import shutil
-from uuid import uuid4
-
 import pytest
-
-
-LOCAL_TMP_ROOT = Path("test_tmp")
 
 
 def pytest_addoption(parser):
@@ -45,14 +38,3 @@ def _isolate_disk_cache(tmp_path, monkeypatch):
     cache_dir.mkdir()
     monkeypatch.setattr(cache_module, "CACHE_DIR", cache_dir)
     return cache_dir
-
-
-@pytest.fixture
-def tmp_path():
-    """Workspace-local tmp dir, avoids pytest's tmpdir plugin."""
-
-    LOCAL_TMP_ROOT.mkdir(exist_ok=True)
-    path = LOCAL_TMP_ROOT / uuid4().hex
-    path.mkdir()
-    yield path
-    shutil.rmtree(path, ignore_errors=True)

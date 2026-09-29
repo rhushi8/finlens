@@ -27,12 +27,12 @@ def run() -> int:
 
     for idx, case in enumerate(CASES, 1):
         answer = route_query(case.query)
-        tools = [trace.tool_name for trace in answer.tool_trace]
+        tools = [trace.tool_name for trace in answer.tool_calls]
 
         checks: list[tuple[str, bool]] = []
-        checks.append(("thesis_non_empty", bool(answer.thesis.strip())))
-        checks.append(("confidence_min", answer.confidence >= case.min_confidence))
-        checks.append(("sources_present", len(answer.sources) > 0 or answer.error is not None))
+        checks.append(("summary_non_empty", bool(answer.summary.strip())))
+        checks.append(("confidence_min", answer.recommendation_confidence >= case.min_confidence))
+        checks.append(("sources_present", answer.source_count > 0 or answer.error is not None))
         if case.required_tool:
             checks.append(("required_tool", case.required_tool in tools))
 
@@ -40,7 +40,7 @@ def run() -> int:
         passed += int(case_ok)
 
         print(f"[{idx}] Query: {case.query}")
-        print(f"    Confidence: {answer.confidence:.2f} | Error: {answer.error}")
+        print(f"    Confidence: {answer.recommendation_confidence:.2f} | Error: {answer.error}")
         print(f"    Tools: {tools}")
         for name, result in checks:
             print(f"    - {name}: {'PASS' if result else 'FAIL'}")
