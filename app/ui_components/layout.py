@@ -46,19 +46,11 @@ def render_header() -> None:
 def render_sidebar() -> str | None:
     sidebar = st.sidebar
     sidebar.header("Controls")
-    sidebar.radio(
-        "Inference profile",
-        options=["Speed", "Quality"],
-        index=1 if st.session_state.get("model_profile") == "Quality" else 0,
-        horizontal=True,
-        key="model_profile",
-    )
+    # Defaults come from init_state; passing index= as well makes Streamlit warn.
+    sidebar.radio("Inference profile", options=["Speed", "Quality"], horizontal=True, key="model_profile")
     sidebar.caption(f"Model: {active_model_name()}")
-    planner_modes = ["hybrid", "llm", "rule"]
-    current_planner_mode = st.session_state.get("planner_mode", "hybrid")
-    selected_idx = planner_modes.index(current_planner_mode) if current_planner_mode in planner_modes else 0
     sidebar.toggle("Show technical details", key="show_technical")
-    sidebar.selectbox("Planner mode", planner_modes, index=selected_idx, key="planner_mode")
+    sidebar.selectbox("Planner mode", ["hybrid", "llm", "rule"], key="planner_mode")
 
     sidebar.divider()
     suggestions_tab, history_tab = sidebar.tabs(["Suggestions", "History"])
